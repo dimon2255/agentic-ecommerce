@@ -1,4 +1,10 @@
 export default defineNuxtConfig({
+  // Use flat directory structure (Nuxt 3 convention) instead of Nuxt 4's default app/ subdirectory
+  srcDir: '.',
+  dir: {
+    app: 'app',
+  },
+
   devtools: { enabled: true },
   modules: ['@nuxtjs/tailwindcss', '@nuxtjs/supabase'],
 
