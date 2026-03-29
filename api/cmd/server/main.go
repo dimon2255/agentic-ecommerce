@@ -10,7 +10,9 @@ import (
 	chimiddleware "github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
 
+	"github.com/dimon2255/agentic-ecommerce/api/internal/cart"
 	"github.com/dimon2255/agentic-ecommerce/api/internal/catalog"
+	"github.com/dimon2255/agentic-ecommerce/api/internal/middleware"
 	"github.com/dimon2255/agentic-ecommerce/api/pkg/supabase"
 )
 
@@ -23,14 +25,20 @@ func main() {
 	if supabaseKey == "" {
 		log.Fatal("SUPABASE_SERVICE_ROLE_KEY is required")
 	}
+	jwtSecret := os.Getenv("SUPABASE_JWT_SECRET")
+	if jwtSecret == "" {
+		log.Fatal("SUPABASE_JWT_SECRET is required")
+	}
 
 	db := supabase.NewClient(supabaseURL, supabaseKey)
+	auth := middleware.NewAuthMiddleware(jwtSecret)
 
 	categoryHandler := catalog.NewCategoryHandler(db)
 	attributeHandler := catalog.NewAttributeHandler(db)
 	productHandler := catalog.NewProductHandler(db)
 	skuHandler := catalog.NewSKUHandler(db)
 	customFieldHandler := catalog.NewCustomFieldHandler(db)
+	cartHandler := cart.NewCartHandler(db)
 
 	r := chi.NewRouter()
 
@@ -39,7 +47,7 @@ func main() {
 	r.Use(cors.Handler(cors.Options{
 		AllowedOrigins:   []string{"http://localhost:3000"},
 		AllowedMethods:   []string{"GET", "POST", "PATCH", "DELETE", "OPTIONS"},
-		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type"},
+		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-Session-ID"},
 		AllowCredentials: true,
 		MaxAge:           300,
 	}))
@@ -59,6 +67,12 @@ func main() {
 			r.Mount("/", skuHandler.Routes())
 		})
 		r.Mount("/custom-fields", customFieldHandler.Routes())
+
+		// Cart routes — OptionalAuth so both guests and users can access
+		r.Group(func(r chi.Router) {
+			r.Use(auth.OptionalAuth)
+			r.Mount("/cart", cartHandler.Routes())
+		})
 	})
 
 	port := os.Getenv("API_PORT")
