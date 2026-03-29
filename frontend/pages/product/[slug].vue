@@ -22,10 +22,12 @@
           </div>
           <button
             class="mt-8 w-full bg-primary-600 text-white py-3 px-6 rounded-lg font-medium hover:bg-primary-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
-            :disabled="!selectedSku"
+            :disabled="!selectedSku || addingToCart"
+            @click="addToCart"
           >
-            {{ selectedSku ? 'Add to Cart' : 'Select options' }}
+            {{ addingToCart ? 'Adding...' : selectedSku ? 'Add to Cart' : 'Select options' }}
           </button>
+          <p v-if="addedMsg" class="mt-2 text-sm text-green-600 text-center">{{ addedMsg }}</p>
         </div>
       </div>
     </div>
@@ -67,5 +69,24 @@ const selectedSku = ref<any>(null)
 
 function onSkuSelect(sku: any) {
   selectedSku.value = sku
+}
+
+const { addItem } = useCart()
+const addingToCart = ref(false)
+const addedMsg = ref('')
+
+async function addToCart() {
+  if (!selectedSku.value) return
+  addingToCart.value = true
+  addedMsg.value = ''
+  try {
+    await addItem(selectedSku.value.id)
+    addedMsg.value = 'Added to cart!'
+    setTimeout(() => { addedMsg.value = '' }, 2000)
+  } catch {
+    addedMsg.value = 'Failed to add to cart'
+  } finally {
+    addingToCart.value = false
+  }
 }
 </script>
