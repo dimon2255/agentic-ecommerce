@@ -27,7 +27,7 @@
           >
             {{ addingToCart ? 'Adding...' : selectedSku ? 'Add to Cart' : 'Select options' }}
           </button>
-          <p v-if="addedMsg" class="mt-2 text-sm text-green-600 text-center">{{ addedMsg }}</p>
+          <p v-if="addedMsg" class="mt-2 text-sm text-center" :class="addedMsg === 'Added to cart!' ? 'text-green-600' : 'text-red-600'">{{ addedMsg }}</p>
         </div>
       </div>
     </div>

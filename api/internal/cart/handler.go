@@ -45,7 +45,7 @@ func (h *CartHandler) findActiveCart(r *http.Request) *Cart {
 		return nil
 	}
 
-	if err := q.Execute(&carts); err != nil || len(carts) == 0 {
+	if err := q.Limit(1).Execute(&carts); err != nil || len(carts) == 0 {
 		return nil
 	}
 	return &carts[0]
@@ -146,8 +146,8 @@ func (h *CartHandler) AddItem(w http.ResponseWriter, r *http.Request) {
 		response.Error(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
-	if req.SKUID == "" || req.Quantity < 1 {
-		response.Error(w, http.StatusBadRequest, "sku_id is required and quantity must be at least 1")
+	if req.SKUID == "" || req.Quantity < 1 || req.Quantity > 999 {
+		response.Error(w, http.StatusBadRequest, "sku_id is required and quantity must be between 1 and 999")
 		return
 	}
 
@@ -214,8 +214,8 @@ func (h *CartHandler) UpdateItem(w http.ResponseWriter, r *http.Request) {
 		response.Error(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
-	if req.Quantity < 1 {
-		response.Error(w, http.StatusBadRequest, "quantity must be at least 1")
+	if req.Quantity < 1 || req.Quantity > 999 {
+		response.Error(w, http.StatusBadRequest, "quantity must be between 1 and 999")
 		return
 	}
 
@@ -238,6 +238,7 @@ func (h *CartHandler) UpdateItem(w http.ResponseWriter, r *http.Request) {
 	if err := h.db.From("cart_items").
 		Update(map[string]any{"quantity": req.Quantity}).
 		Eq("id", itemID).
+		Eq("cart_id", cart.ID).
 		Execute(&updated); err != nil {
 		response.Error(w, http.StatusInternalServerError, "failed to update item")
 		return
@@ -271,7 +272,9 @@ func (h *CartHandler) RemoveItem(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.db.From("cart_items").Delete().
-		Eq("id", itemID).Execute(nil); err != nil {
+		Eq("id", itemID).
+		Eq("cart_id", cart.ID).
+		Execute(nil); err != nil {
 		response.Error(w, http.StatusInternalServerError, "failed to remove item")
 		return
 	}
@@ -347,34 +350,49 @@ func (h *CartHandler) MergeCart(w http.ResponseWriter, r *http.Request) {
 	for _, item := range guestItems {
 		// Check for duplicate SKU in user cart
 		var existing []CartItem
-		h.db.From("cart_items").Select("*").
+		if err := h.db.From("cart_items").Select("*").
 			Eq("cart_id", userCart.ID).Eq("sku_id", item.SKUID).
-			Execute(&existing)
+			Execute(&existing); err != nil {
+			response.Error(w, http.StatusInternalServerError, "failed to check duplicate items")
+			return
+		}
 
 		if len(existing) > 0 {
 			// Increment quantity on existing user cart item
 			newQty := existing[0].Quantity + item.Quantity
-			h.db.From("cart_items").
+			if err := h.db.From("cart_items").
 				Update(map[string]any{"quantity": newQty}).
 				Eq("id", existing[0].ID).
-				Execute(nil)
+				Execute(nil); err != nil {
+				response.Error(w, http.StatusInternalServerError, "failed to merge item quantity")
+				return
+			}
 			// Delete guest item
-			h.db.From("cart_items").Delete().
-				Eq("id", item.ID).Execute(nil)
+			if err := h.db.From("cart_items").Delete().
+				Eq("id", item.ID).Execute(nil); err != nil {
+				response.Error(w, http.StatusInternalServerError, "failed to remove merged guest item")
+				return
+			}
 		} else {
 			// Move item to user cart
-			h.db.From("cart_items").
+			if err := h.db.From("cart_items").
 				Update(map[string]any{"cart_id": userCart.ID}).
 				Eq("id", item.ID).
-				Execute(nil)
+				Execute(nil); err != nil {
+				response.Error(w, http.StatusInternalServerError, "failed to move item to user cart")
+				return
+			}
 		}
 	}
 
 	// Mark guest cart as merged
-	h.db.From("carts").
+	if err := h.db.From("carts").
 		Update(map[string]any{"status": "merged"}).
 		Eq("id", guestCart.ID).
-		Execute(nil)
+		Execute(nil); err != nil {
+		response.Error(w, http.StatusInternalServerError, "failed to mark guest cart as merged")
+		return
+	}
 
 	resp, err := h.getCartResponse(userCart.ID)
 	if err != nil {
@@ -391,6 +409,7 @@ func (h *CartHandler) findUserCart(userID string) *Cart {
 	if err := h.db.From("carts").Select("*").
 		Eq("user_id", userID).
 		Eq("status", "active").
+		Limit(1).
 		Execute(&carts); err != nil || len(carts) == 0 {
 		return nil
 	}
