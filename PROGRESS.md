@@ -5,13 +5,13 @@
 V1: Modern e-commerce platform (Nuxt 3 + Go API + Supabase + Stripe 3DS)
 V2+: Add AI agents to the platform
 
-## Current Phase: Plan 1 — Foundation & Catalog
+## Current Phase: Plan 2 — Cart & Auth
 
 ### Plans
 
 | # | Plan | Status | Spec |
 |---|------|--------|------|
-| 1 | Foundation & Catalog | Not started | [Design Spec](docs/superpowers/specs/2026-03-29-e-shop-platform-design.md) |
+| 1 | Foundation & Catalog | Complete | [Design Spec](docs/superpowers/specs/2026-03-29-e-shop-platform-design.md) |
 | 2 | Cart & Auth | Not started | |
 | 3 | Checkout & Payments | Not started | |
 | 4 | Admin Dashboard | Not started | |
@@ -19,8 +19,8 @@ V2+: Add AI agents to the platform
 ### Milestones
 
 - [x] Design spec written and approved (2026-03-29)
-- [ ] Plan 1: Foundation & Catalog — implementation plan written
-- [ ] Plan 1: Foundation & Catalog — implemented
+- [x] Plan 1: Foundation & Catalog — implementation plan written (2026-03-29)
+- [x] Plan 1: Foundation & Catalog — implemented (2026-03-29)
 - [ ] Plan 2: Cart & Auth — implementation plan written
 - [ ] Plan 2: Cart & Auth — implemented
 - [ ] Plan 3: Checkout & Payments — implementation plan written
