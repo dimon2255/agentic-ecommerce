@@ -9,9 +9,29 @@ import (
 	"github.com/go-chi/chi/v5"
 	chimiddleware "github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
+
+	"github.com/dimon2255/agentic-ecommerce/api/internal/catalog"
+	"github.com/dimon2255/agentic-ecommerce/api/pkg/supabase"
 )
 
 func main() {
+	supabaseURL := os.Getenv("SUPABASE_URL")
+	if supabaseURL == "" {
+		supabaseURL = "http://127.0.0.1:54321"
+	}
+	supabaseKey := os.Getenv("SUPABASE_SERVICE_ROLE_KEY")
+	if supabaseKey == "" {
+		log.Fatal("SUPABASE_SERVICE_ROLE_KEY is required")
+	}
+
+	db := supabase.NewClient(supabaseURL, supabaseKey)
+
+	categoryHandler := catalog.NewCategoryHandler(db)
+	attributeHandler := catalog.NewAttributeHandler(db)
+	productHandler := catalog.NewProductHandler(db)
+	skuHandler := catalog.NewSKUHandler(db)
+	customFieldHandler := catalog.NewCustomFieldHandler(db)
+
 	r := chi.NewRouter()
 
 	r.Use(chimiddleware.Logger)
@@ -27,6 +47,18 @@ func main() {
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.Write([]byte(`{"status":"ok"}`))
+	})
+
+	r.Route("/api/v1", func(r chi.Router) {
+		r.Mount("/categories", categoryHandler.Routes())
+		r.Route("/categories/{categoryId}/attributes", func(r chi.Router) {
+			r.Mount("/", attributeHandler.Routes())
+		})
+		r.Mount("/products", productHandler.Routes())
+		r.Route("/products/{productId}/skus", func(r chi.Router) {
+			r.Mount("/", skuHandler.Routes())
+		})
+		r.Mount("/custom-fields", customFieldHandler.Routes())
 	})
 
 	port := os.Getenv("API_PORT")
