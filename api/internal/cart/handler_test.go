@@ -204,3 +204,181 @@ func TestAddItem_ValidationErrors(t *testing.T) {
 		t.Fatalf("expected 400, got %d", w.Code)
 	}
 }
+
+func TestUpdateItem_ChangesQuantity(t *testing.T) {
+	callCount := 0
+	handler, server := setupTestCartHandler(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		callCount++
+		switch callCount {
+		case 1:
+			// Find cart
+			json.NewEncoder(w).Encode([]Cart{
+				{ID: "cart-1", SessionID: "session-abc", Status: "active"},
+			})
+		case 2:
+			// Find item in cart
+			json.NewEncoder(w).Encode([]CartItem{
+				{ID: "item-1", CartID: "cart-1", SKUID: "sku-1", Quantity: 1, UnitPrice: 24.99},
+			})
+		case 3:
+			// Update quantity
+			json.NewEncoder(w).Encode([]CartItem{
+				{ID: "item-1", CartID: "cart-1", SKUID: "sku-1", Quantity: 3, UnitPrice: 24.99},
+			})
+		case 4:
+			// Fetch enriched items for response
+			json.NewEncoder(w).Encode([]CartItemWithSKU{
+				{
+					ID: "item-1", CartID: "cart-1", SKUID: "sku-1",
+					Quantity: 3, UnitPrice: 24.99,
+					SKU: SKUEmbed{SKUCode: "TEE-BLK-M", Product: ProductEmbed{Name: "Classic Tee", BasePrice: 24.99}},
+				},
+			})
+		}
+	})
+	defer server.Close()
+
+	body := `{"quantity":3}`
+	req := httptest.NewRequest("PATCH", "/cart/items/item-1", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-Session-ID", "session-abc")
+	req = withChiParam(req, "itemId", "item-1")
+	w := httptest.NewRecorder()
+
+	handler.UpdateItem(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+
+	var result CartResponse
+	json.NewDecoder(w.Body).Decode(&result)
+	if len(result.Items) != 1 || result.Items[0].Quantity != 3 {
+		t.Errorf("expected quantity 3, got %+v", result.Items)
+	}
+}
+
+func TestRemoveItem_DeletesItem(t *testing.T) {
+	callCount := 0
+	handler, server := setupTestCartHandler(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		callCount++
+		switch callCount {
+		case 1:
+			// Find cart
+			json.NewEncoder(w).Encode([]Cart{
+				{ID: "cart-1", SessionID: "session-abc", Status: "active"},
+			})
+		case 2:
+			// Find item in cart
+			json.NewEncoder(w).Encode([]CartItem{
+				{ID: "item-1", CartID: "cart-1", SKUID: "sku-1", Quantity: 1, UnitPrice: 24.99},
+			})
+		case 3:
+			// Delete item
+			w.WriteHeader(http.StatusOK)
+			json.NewEncoder(w).Encode([]CartItem{})
+		}
+	})
+	defer server.Close()
+
+	req := httptest.NewRequest("DELETE", "/cart/items/item-1", nil)
+	req.Header.Set("X-Session-ID", "session-abc")
+	req = withChiParam(req, "itemId", "item-1")
+	w := httptest.NewRecorder()
+
+	handler.RemoveItem(w, req)
+
+	if w.Code != http.StatusNoContent {
+		t.Fatalf("expected 204, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestMergeCart_MovesGuestItemsToUserCart(t *testing.T) {
+	callCount := 0
+	handler, server := setupTestCartHandler(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		callCount++
+		switch callCount {
+		case 1:
+			// Find guest cart by session_id
+			json.NewEncoder(w).Encode([]Cart{
+				{ID: "guest-cart", SessionID: "session-abc", Status: "active"},
+			})
+		case 2:
+			// Find user cart
+			json.NewEncoder(w).Encode([]Cart{
+				{ID: "user-cart", UserID: strPtr("user-123"), SessionID: "session-old", Status: "active"},
+			})
+		case 3:
+			// Fetch guest cart items
+			json.NewEncoder(w).Encode([]CartItem{
+				{ID: "guest-item-1", CartID: "guest-cart", SKUID: "sku-1", Quantity: 2, UnitPrice: 24.99},
+			})
+		case 4:
+			// Check for duplicate SKU in user cart — none found
+			json.NewEncoder(w).Encode([]CartItem{})
+		case 5:
+			// Move item: update cart_id
+			json.NewEncoder(w).Encode([]CartItem{
+				{ID: "guest-item-1", CartID: "user-cart", SKUID: "sku-1", Quantity: 2, UnitPrice: 24.99},
+			})
+		case 6:
+			// Mark guest cart as merged
+			json.NewEncoder(w).Encode([]Cart{
+				{ID: "guest-cart", SessionID: "session-abc", Status: "merged"},
+			})
+		case 7:
+			// Fetch enriched user cart items for response
+			json.NewEncoder(w).Encode([]CartItemWithSKU{
+				{
+					ID: "guest-item-1", CartID: "user-cart", SKUID: "sku-1",
+					Quantity: 2, UnitPrice: 24.99,
+					SKU: SKUEmbed{SKUCode: "TEE-BLK-M", Product: ProductEmbed{Name: "Classic Tee", BasePrice: 24.99}},
+				},
+			})
+		}
+	})
+	defer server.Close()
+
+	body := `{"session_id":"session-abc"}`
+	req := httptest.NewRequest("POST", "/cart/merge", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req = withUserID(req, "user-123")
+	w := httptest.NewRecorder()
+
+	handler.MergeCart(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+
+	var result CartResponse
+	json.NewDecoder(w.Body).Decode(&result)
+	if result.ID != "user-cart" {
+		t.Errorf("expected user-cart, got %s", result.ID)
+	}
+	if len(result.Items) != 1 {
+		t.Fatalf("expected 1 item, got %d", len(result.Items))
+	}
+}
+
+func TestMergeCart_RequiresAuth(t *testing.T) {
+	handler, server := setupTestCartHandler(func(w http.ResponseWriter, r *http.Request) {})
+	defer server.Close()
+
+	body := `{"session_id":"session-abc"}`
+	req := httptest.NewRequest("POST", "/cart/merge", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	// No user ID set
+	w := httptest.NewRecorder()
+
+	handler.MergeCart(w, req)
+
+	if w.Code != http.StatusUnauthorized {
+		t.Fatalf("expected 401, got %d", w.Code)
+	}
+}
+
+func strPtr(s string) *string { return &s }

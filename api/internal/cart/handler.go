@@ -207,13 +207,192 @@ func (h *CartHandler) AddItem(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *CartHandler) UpdateItem(w http.ResponseWriter, r *http.Request) {
-	response.Error(w, http.StatusNotImplemented, "not implemented")
+	itemID := chi.URLParam(r, "itemId")
+
+	var req UpdateItemRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		response.Error(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	if req.Quantity < 1 {
+		response.Error(w, http.StatusBadRequest, "quantity must be at least 1")
+		return
+	}
+
+	cart := h.findActiveCart(r)
+	if cart == nil {
+		response.Error(w, http.StatusNotFound, "cart not found")
+		return
+	}
+
+	// Verify item belongs to this cart
+	var items []CartItem
+	if err := h.db.From("cart_items").Select("*").
+		Eq("id", itemID).Eq("cart_id", cart.ID).
+		Execute(&items); err != nil || len(items) == 0 {
+		response.Error(w, http.StatusNotFound, "cart item not found")
+		return
+	}
+
+	var updated []CartItem
+	if err := h.db.From("cart_items").
+		Update(map[string]any{"quantity": req.Quantity}).
+		Eq("id", itemID).
+		Execute(&updated); err != nil {
+		response.Error(w, http.StatusInternalServerError, "failed to update item")
+		return
+	}
+
+	resp, err := h.getCartResponse(cart.ID)
+	if err != nil {
+		response.Error(w, http.StatusInternalServerError, "failed to fetch updated cart")
+		return
+	}
+
+	response.JSON(w, http.StatusOK, resp)
 }
 
 func (h *CartHandler) RemoveItem(w http.ResponseWriter, r *http.Request) {
-	response.Error(w, http.StatusNotImplemented, "not implemented")
+	itemID := chi.URLParam(r, "itemId")
+
+	cart := h.findActiveCart(r)
+	if cart == nil {
+		response.Error(w, http.StatusNotFound, "cart not found")
+		return
+	}
+
+	// Verify item belongs to this cart
+	var items []CartItem
+	if err := h.db.From("cart_items").Select("*").
+		Eq("id", itemID).Eq("cart_id", cart.ID).
+		Execute(&items); err != nil || len(items) == 0 {
+		response.Error(w, http.StatusNotFound, "cart item not found")
+		return
+	}
+
+	if err := h.db.From("cart_items").Delete().
+		Eq("id", itemID).Execute(nil); err != nil {
+		response.Error(w, http.StatusInternalServerError, "failed to remove item")
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func (h *CartHandler) MergeCart(w http.ResponseWriter, r *http.Request) {
-	response.Error(w, http.StatusNotImplemented, "not implemented")
+	userID, hasUser := middleware.GetUserID(r.Context())
+	if !hasUser || userID == "" {
+		response.Error(w, http.StatusUnauthorized, "authentication required")
+		return
+	}
+
+	var req MergeCartRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		response.Error(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	if req.SessionID == "" {
+		response.Error(w, http.StatusBadRequest, "session_id is required")
+		return
+	}
+
+	// Find guest cart
+	var guestCarts []Cart
+	if err := h.db.From("carts").Select("*").
+		Eq("session_id", req.SessionID).
+		Is("user_id", "null").
+		Eq("status", "active").
+		Execute(&guestCarts); err != nil || len(guestCarts) == 0 {
+		// No guest cart to merge — return current user cart
+		userCart := h.findUserCart(userID)
+		if userCart == nil {
+			response.JSON(w, http.StatusOK, CartResponse{Items: []CartItemWithSKU{}})
+			return
+		}
+		resp, err := h.getCartResponse(userCart.ID)
+		if err != nil {
+			response.Error(w, http.StatusInternalServerError, "failed to fetch cart")
+			return
+		}
+		response.JSON(w, http.StatusOK, resp)
+		return
+	}
+	guestCart := guestCarts[0]
+
+	// Find or create user cart
+	userCart := h.findUserCart(userID)
+	if userCart == nil {
+		var created []Cart
+		if err := h.db.From("carts").Insert(map[string]any{
+			"user_id":    userID,
+			"session_id": req.SessionID,
+			"status":     "active",
+		}).Execute(&created); err != nil || len(created) == 0 {
+			response.Error(w, http.StatusInternalServerError, "failed to create user cart")
+			return
+		}
+		userCart = &created[0]
+	}
+
+	// Fetch guest cart items
+	var guestItems []CartItem
+	if err := h.db.From("cart_items").Select("*").
+		Eq("cart_id", guestCart.ID).
+		Execute(&guestItems); err != nil {
+		response.Error(w, http.StatusInternalServerError, "failed to fetch guest cart items")
+		return
+	}
+
+	// Move each guest item to user cart
+	for _, item := range guestItems {
+		// Check for duplicate SKU in user cart
+		var existing []CartItem
+		h.db.From("cart_items").Select("*").
+			Eq("cart_id", userCart.ID).Eq("sku_id", item.SKUID).
+			Execute(&existing)
+
+		if len(existing) > 0 {
+			// Increment quantity on existing user cart item
+			newQty := existing[0].Quantity + item.Quantity
+			h.db.From("cart_items").
+				Update(map[string]any{"quantity": newQty}).
+				Eq("id", existing[0].ID).
+				Execute(nil)
+			// Delete guest item
+			h.db.From("cart_items").Delete().
+				Eq("id", item.ID).Execute(nil)
+		} else {
+			// Move item to user cart
+			h.db.From("cart_items").
+				Update(map[string]any{"cart_id": userCart.ID}).
+				Eq("id", item.ID).
+				Execute(nil)
+		}
+	}
+
+	// Mark guest cart as merged
+	h.db.From("carts").
+		Update(map[string]any{"status": "merged"}).
+		Eq("id", guestCart.ID).
+		Execute(nil)
+
+	resp, err := h.getCartResponse(userCart.ID)
+	if err != nil {
+		response.Error(w, http.StatusInternalServerError, "failed to fetch merged cart")
+		return
+	}
+
+	response.JSON(w, http.StatusOK, resp)
+}
+
+// findUserCart looks up the active cart for a specific user ID.
+func (h *CartHandler) findUserCart(userID string) *Cart {
+	var carts []Cart
+	if err := h.db.From("carts").Select("*").
+		Eq("user_id", userID).
+		Eq("status", "active").
+		Execute(&carts); err != nil || len(carts) == 0 {
+		return nil
+	}
+	return &carts[0]
 }
