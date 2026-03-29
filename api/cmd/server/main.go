@@ -45,7 +45,7 @@ func main() {
 	r.Use(chimiddleware.Logger)
 	r.Use(chimiddleware.Recoverer)
 	r.Use(cors.Handler(cors.Options{
-		AllowedOrigins:   []string{"http://localhost:3000"},
+		AllowedOrigins:   []string{"http://localhost:3000", "http://localhost:3001"},
 		AllowedMethods:   []string{"GET", "POST", "PATCH", "DELETE", "OPTIONS"},
 		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-Session-ID"},
 		AllowCredentials: true,
@@ -77,7 +77,7 @@ func main() {
 
 	port := os.Getenv("API_PORT")
 	if port == "" {
-		port = "8080"
+		port = "9090"
 	}
 
 	fmt.Printf("API server listening on :%s\n", port)
