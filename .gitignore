@@ -1,2 +1,17 @@
 .superpowers/
 _bmad/
+
+# Node
+node_modules/
+.nuxt/
+.output/
+dist/
+
+# Env
+.env
+.env.local
+.env.*.local
+
+# Go build artifacts
+api/server
+api/*.exe
