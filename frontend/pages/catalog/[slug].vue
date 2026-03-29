@@ -42,9 +42,20 @@ const { data: subcategories } = await useAsyncData(`subcats-${slug}`, () =>
     : Promise.resolve([])
 )
 
-const { data: products } = await useAsyncData(`products-${slug}`, () =>
-  category.value
-    ? get<Array<any>>(`/products?category_id=${category.value.id}`)
-    : Promise.resolve([])
-)
+const { data: products } = await useAsyncData(`products-${slug}`, async () => {
+  if (!category.value) return []
+
+  // Fetch products from this category
+  const direct = await get<Array<any>>(`/products?category_id=${category.value.id}`)
+
+  // Also fetch products from subcategories
+  if (subcategories.value?.length) {
+    const nested = await Promise.all(
+      subcategories.value.map(sub => get<Array<any>>(`/products?category_id=${sub.id}`))
+    )
+    return [...direct, ...nested.flat()]
+  }
+
+  return direct
+})
 </script>

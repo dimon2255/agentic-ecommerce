@@ -44,11 +44,11 @@ insert into attribute_options (category_attribute_id, value, sort_order) values
   ('b1000000-0000-0000-0000-000000000004', 'Red', 3);
 
 -- Products
-insert into products (id, category_id, name, slug, description, base_price, status) values
-  ('c1000000-0000-0000-0000-000000000001', 'a1000000-0000-0000-0000-000000000003', 'ProBook 15', 'probook-15', 'Professional laptop with stunning display and all-day battery life.', 999.99, 'active'),
-  ('c1000000-0000-0000-0000-000000000002', 'a1000000-0000-0000-0000-000000000003', 'UltraSlim Air', 'ultraslim-air', 'Ultra-lightweight laptop for professionals on the go.', 1299.99, 'active'),
-  ('c1000000-0000-0000-0000-000000000003', 'a1000000-0000-0000-0000-000000000004', 'Classic Cotton Tee', 'classic-cotton-tee', 'Soft 100% cotton t-shirt. Essential wardrobe staple.', 24.99, 'active'),
-  ('c1000000-0000-0000-0000-000000000004', 'a1000000-0000-0000-0000-000000000004', 'Performance Dry-Fit', 'performance-dry-fit', 'Moisture-wicking athletic t-shirt for active lifestyles.', 34.99, 'active');
+insert into products (id, category_id, name, slug, description, base_price, status, images) values
+  ('c1000000-0000-0000-0000-000000000001', 'a1000000-0000-0000-0000-000000000003', 'ProBook 15', 'probook-15', 'Professional laptop with stunning display and all-day battery life.', 999.99, 'active', '{"https://images.unsplash.com/photo-1496181133206-80ce9b88a853?w=600&h=600&fit=crop"}'),
+  ('c1000000-0000-0000-0000-000000000002', 'a1000000-0000-0000-0000-000000000003', 'UltraSlim Air', 'ultraslim-air', 'Ultra-lightweight laptop for professionals on the go.', 1299.99, 'active', '{"https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=600&h=600&fit=crop"}'),
+  ('c1000000-0000-0000-0000-000000000003', 'a1000000-0000-0000-0000-000000000004', 'Classic Cotton Tee', 'classic-cotton-tee', 'Soft 100% cotton t-shirt. Essential wardrobe staple.', 24.99, 'active', '{"https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=600&h=600&fit=crop"}'),
+  ('c1000000-0000-0000-0000-000000000004', 'a1000000-0000-0000-0000-000000000004', 'Performance Dry-Fit', 'performance-dry-fit', 'Moisture-wicking athletic t-shirt for active lifestyles.', 34.99, 'active', '{"https://images.unsplash.com/photo-1581655353564-df123a1eb820?w=600&h=600&fit=crop"}');
 
 -- SKUs for ProBook 15
 insert into skus (id, product_id, sku_code, price_override, status) values
