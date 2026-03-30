@@ -159,14 +159,84 @@ func (h *CheckoutHandler) StartCheckout(w http.ResponseWriter, r *http.Request) 
 	})
 }
 
-// GetOrder and HandleWebhook - stubs for compilation (implemented in Tasks 5 and 6)
 func (h *CheckoutHandler) GetOrder(w http.ResponseWriter, r *http.Request) {
-	response.Error(w, http.StatusNotImplemented, "not implemented")
+	orderID := chi.URLParam(r, "id")
+
+	var orders []Order
+	err := h.db.From("orders").Select("*").Eq("id", orderID).Limit(1).Execute(&orders)
+	if err != nil || len(orders) == 0 {
+		response.Error(w, http.StatusNotFound, "order not found")
+		return
+	}
+	order := orders[0]
+
+	var items []OrderItem
+	h.db.From("order_items").Select("*").Eq("order_id", orderID).Execute(&items)
+	if items == nil {
+		items = []OrderItem{}
+	}
+
+	itemResponses := make([]OrderItemResponse, len(items))
+	for i, item := range items {
+		itemResponses[i] = OrderItemResponse{
+			ProductName: item.ProductName,
+			SKUCode:     item.SKUCode,
+			Quantity:    item.Quantity,
+			UnitPrice:   item.UnitPrice,
+		}
+	}
+
+	response.JSON(w, http.StatusOK, OrderResponse{
+		ID:              order.ID,
+		Status:          order.Status,
+		Email:           order.Email,
+		ShippingAddress: order.ShippingAddress,
+		Subtotal:        order.Subtotal,
+		Total:           order.Total,
+		Items:           itemResponses,
+		CreatedAt:       order.CreatedAt,
+	})
 }
 
 func (h *CheckoutHandler) HandleWebhook(w http.ResponseWriter, r *http.Request) {
-	_ = io.ReadAll
-	response.Error(w, http.StatusNotImplemented, "not implemented")
+	payload, err := io.ReadAll(r.Body)
+	if err != nil {
+		response.Error(w, http.StatusBadRequest, "failed to read request body")
+		return
+	}
+
+	sigHeader := r.Header.Get("Stripe-Signature")
+	eventType, piID, err := h.payments.VerifyWebhook(payload, sigHeader)
+	if err != nil {
+		response.Error(w, http.StatusBadRequest, "invalid webhook signature")
+		return
+	}
+
+	switch eventType {
+	case "payment_intent.succeeded":
+		h.db.From("orders").
+			Update(map[string]any{"status": "paid"}).
+			Eq("stripe_payment_intent_id", piID).
+			Execute(nil)
+
+		var orders []Order
+		h.db.From("orders").Select("user_id").Eq("stripe_payment_intent_id", piID).Execute(&orders)
+		if len(orders) > 0 && orders[0].UserID != nil {
+			h.db.From("carts").
+				Update(map[string]any{"status": "expired"}).
+				Eq("user_id", *orders[0].UserID).
+				Eq("status", "active").
+				Execute(nil)
+		}
+
+	case "payment_intent.payment_failed":
+		h.db.From("orders").
+			Update(map[string]any{"status": "cancelled"}).
+			Eq("stripe_payment_intent_id", piID).
+			Execute(nil)
+	}
+
+	response.JSON(w, http.StatusOK, map[string]string{"status": "ok"})
 }
 
 func (h *CheckoutHandler) findActiveCart(r *http.Request) *cart {
