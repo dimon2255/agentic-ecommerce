@@ -1,28 +1,44 @@
 <template>
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-    <div v-if="category">
-      <nav class="text-sm text-gray-500 mb-6">
-        <NuxtLink to="/catalog" class="hover:text-gray-700">Catalog</NuxtLink>
-        <span class="mx-2">/</span>
-        <span class="text-gray-900">{{ category.name }}</span>
+    <div v-if="category" class="animate-fade-in">
+      <nav class="text-sm text-muted mb-6 flex items-center gap-2">
+        <NuxtLink to="/catalog" class="hover:text-secondary transition-colors">Catalog</NuxtLink>
+        <span class="text-muted/50">/</span>
+        <span class="text-secondary">{{ category.name }}</span>
       </nav>
-      <h1 class="text-3xl font-bold text-gray-900 mb-2">{{ category.name }}</h1>
-      <div v-if="subcategories?.length" class="mb-8">
-        <h2 class="text-lg font-semibold text-gray-700 mb-3">Subcategories</h2>
-        <div class="flex flex-wrap gap-3">
-          <NuxtLink v-for="sub in subcategories" :key="sub.id" :to="`/catalog/${sub.slug}`"
-            class="px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:border-primary-300 hover:text-primary-600 transition-colors">
+
+      <h1 class="text-3xl font-display font-bold text-[var(--text-primary)] mb-2 animate-fade-in-up">
+        {{ category.name }}
+      </h1>
+
+      <div v-if="subcategories?.length" class="mb-10 animate-fade-in-up delay-1">
+        <h2 class="text-sm font-medium text-muted uppercase tracking-wider mb-3">Subcategories</h2>
+        <div class="flex flex-wrap gap-2">
+          <NuxtLink
+            v-for="sub in subcategories"
+            :key="sub.id"
+            :to="`/catalog/${sub.slug}`"
+            class="px-4 py-2 bg-surface-elevated border border-[var(--border-default)] rounded-lg text-sm font-medium text-secondary hover:border-accent/30 hover:text-accent transition-all duration-200"
+          >
             {{ sub.name }}
           </NuxtLink>
         </div>
       </div>
-      <div v-if="products?.length" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-        <ProductCard v-for="product in products" :key="product.id" :product="product" />
+
+      <div v-if="products?.length" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
+        <div
+          v-for="(product, i) in products"
+          :key="product.id"
+          class="animate-fade-in-up"
+          :class="`delay-${Math.min(i + 1, 6)}`"
+        >
+          <ProductCard :product="product" />
+        </div>
       </div>
-      <p v-else class="text-gray-500">No products in this category yet.</p>
+      <p v-else class="text-muted">No products in this category yet.</p>
     </div>
     <div v-else>
-      <p class="text-gray-500">Category not found.</p>
+      <p class="text-muted">Category not found.</p>
     </div>
   </div>
 </template>

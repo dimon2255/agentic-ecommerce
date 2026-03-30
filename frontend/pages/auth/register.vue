@@ -1,63 +1,68 @@
 <template>
-  <div class="min-h-[60vh] flex items-center justify-center px-4">
-    <div class="w-full max-w-sm">
-      <h1 class="text-2xl font-bold text-gray-900 text-center mb-8">Create account</h1>
-
-      <div v-if="errorMsg" class="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
-        {{ errorMsg }}
-      </div>
-      <div v-if="successMsg" class="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-700">
-        {{ successMsg }}
+  <div class="min-h-[70vh] flex items-center justify-center px-4">
+    <div class="w-full max-w-sm animate-scale-in">
+      <div class="text-center mb-8">
+        <h1 class="text-2xl font-display font-bold text-[var(--text-primary)]">Create account</h1>
+        <p class="text-sm text-muted mt-1">Join FlexShop today</p>
       </div>
 
-      <form @submit.prevent="handleRegister" class="space-y-4">
-        <div>
-          <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Email</label>
-          <input
-            id="email"
-            v-model="email"
-            type="email"
-            required
-            autocomplete="email"
-            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none"
-          />
+      <div class="card-dark p-6">
+        <div v-if="errorMsg" class="mb-4 p-3 bg-red-900/20 border border-red-700/30 rounded-lg text-sm text-red-300">
+          {{ errorMsg }}
         </div>
-        <div>
-          <label for="password" class="block text-sm font-medium text-gray-700 mb-1">Password</label>
-          <input
-            id="password"
-            v-model="password"
-            type="password"
-            required
-            minlength="6"
-            autocomplete="new-password"
-            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none"
-          />
+        <div v-if="successMsg" class="mb-4 p-3 bg-emerald-900/20 border border-emerald-700/30 rounded-lg text-sm text-emerald-300">
+          {{ successMsg }}
         </div>
-        <div>
-          <label for="confirm" class="block text-sm font-medium text-gray-700 mb-1">Confirm password</label>
-          <input
-            id="confirm"
-            v-model="confirmPassword"
-            type="password"
-            required
-            minlength="6"
-            autocomplete="new-password"
-            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none"
-          />
-        </div>
-        <button
-          type="submit"
-          :disabled="loading"
-          class="w-full bg-primary-600 text-white py-2.5 rounded-lg font-medium hover:bg-primary-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
-        >
-          {{ loading ? 'Creating account...' : 'Create account' }}
-        </button>
-      </form>
 
-      <p class="mt-6 text-center text-sm text-gray-500">
+        <form @submit.prevent="handleRegister" class="space-y-4">
+          <div>
+            <label for="email" class="block text-sm font-medium text-secondary mb-1.5">Email</label>
+            <input
+              id="email"
+              v-model="email"
+              type="email"
+              required
+              autocomplete="email"
+              class="input-dark"
+            />
+          </div>
+          <div>
+            <label for="password" class="block text-sm font-medium text-secondary mb-1.5">Password</label>
+            <input
+              id="password"
+              v-model="password"
+              type="password"
+              required
+              minlength="6"
+              autocomplete="new-password"
+              class="input-dark"
+            />
+          </div>
+          <div>
+            <label for="confirm" class="block text-sm font-medium text-secondary mb-1.5">Confirm password</label>
+            <input
+              id="confirm"
+              v-model="confirmPassword"
+              type="password"
+              required
+              minlength="6"
+              autocomplete="new-password"
+              class="input-dark"
+            />
+          </div>
+          <button
+            type="submit"
+            :disabled="loading"
+            class="w-full btn-accent py-3 rounded-xl text-sm tracking-wide"
+          >
+            {{ loading ? 'Creating account...' : 'Create account' }}
+          </button>
+        </form>
+      </div>
+
+      <p class="mt-6 text-center text-sm text-muted">
         Already have an account?
-        <NuxtLink to="/auth/login" class="text-primary-600 hover:text-primary-700 font-medium">
+        <NuxtLink to="/auth/login" class="text-accent hover:text-accent-hover font-medium transition-colors ml-1">
           Sign in
         </NuxtLink>
       </p>

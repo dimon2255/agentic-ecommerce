@@ -1,0 +1,195 @@
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300..700;1,9..40,300..700&display=swap');
+
+:root {
+  --font-display: 'Syne', sans-serif;
+  --font-body: 'DM Sans', sans-serif;
+
+  --bg-deep: #06080D;
+  --bg-base: #0C0F17;
+  --bg-surface: #111621;
+  --bg-elevated: #171C28;
+  --bg-hover: #1D2335;
+
+  --border-subtle: rgba(255, 255, 255, 0.04);
+  --border-default: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 255, 255, 0.14);
+
+  --text-primary: #F0F2F5;
+  --text-secondary: #8B95A8;
+  --text-muted: #4A5268;
+
+  --accent: #E8A838;
+  --accent-hover: #F0BE5A;
+  --accent-glow: rgba(232, 168, 56, 0.15);
+}
+
+*,
+*::before,
+*::after {
+  font-family: var(--font-body);
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-display);
+  letter-spacing: -0.02em;
+}
+
+body {
+  background-color: var(--bg-base);
+  color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+::selection {
+  background: rgba(232, 168, 56, 0.3);
+  color: #F0F2F5;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg-deep);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+input, select, textarea {
+  color-scheme: dark;
+}
+
+/* ---------- Utility classes ---------- */
+
+.glass {
+  background: rgba(17, 22, 33, 0.65);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--border-default);
+}
+
+.glass-strong {
+  background: rgba(23, 28, 40, 0.8);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--border-strong);
+}
+
+.glow-hover {
+  transition: box-shadow 0.35s ease, border-color 0.35s ease;
+}
+.glow-hover:hover {
+  box-shadow: 0 0 24px var(--accent-glow), 0 4px 32px rgba(0, 0, 0, 0.3);
+  border-color: rgba(232, 168, 56, 0.22);
+}
+
+.card-dark {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: 1rem;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease, transform 0.3s ease;
+}
+.card-dark:hover {
+  border-color: var(--border-strong);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+}
+
+/* ---------- Animations ---------- */
+
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes scale-in {
+  from { opacity: 0; transform: scale(0.95); }
+  to   { opacity: 1; transform: scale(1); }
+}
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.animate-fade-in-up  { animation: fade-in-up 0.55s ease-out both; }
+.animate-fade-in     { animation: fade-in 0.45s ease-out both; }
+.animate-scale-in    { animation: scale-in 0.45s ease-out both; }
+
+.delay-1 { animation-delay: 0.08s; }
+.delay-2 { animation-delay: 0.16s; }
+.delay-3 { animation-delay: 0.24s; }
+.delay-4 { animation-delay: 0.32s; }
+.delay-5 { animation-delay: 0.40s; }
+.delay-6 { animation-delay: 0.48s; }
+
+/* ---------- Hero mesh gradient ---------- */
+
+.hero-gradient {
+  background:
+    radial-gradient(ellipse 80% 60% at 20% 80%, rgba(232, 168, 56, 0.08) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 50% at 80% 20%, rgba(120, 80, 200, 0.06) 0%, transparent 55%),
+    radial-gradient(ellipse 90% 70% at 50% 50%, rgba(232, 168, 56, 0.03) 0%, transparent 70%),
+    var(--bg-base);
+}
+
+/* ---------- Amber gradient button ---------- */
+
+.btn-accent {
+  background: linear-gradient(135deg, #E8A838 0%, #D4922E 100%);
+  color: #0C0F17;
+  font-weight: 600;
+  border: none;
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.2s ease, box-shadow 0.3s ease;
+}
+.btn-accent:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 20px rgba(232, 168, 56, 0.35);
+}
+.btn-accent:active {
+  transform: translateY(0);
+}
+.btn-accent:disabled {
+  background: var(--bg-hover);
+  color: var(--text-muted);
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* ---------- Form inputs ---------- */
+
+.input-dark {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  color: var(--text-primary);
+  border-radius: 0.5rem;
+  padding: 0.625rem 0.875rem;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  outline: none;
+  width: 100%;
+}
+.input-dark::placeholder {
+  color: var(--text-muted);
+}
+.input-dark:focus {
+  border-color: rgba(232, 168, 56, 0.4);
+  box-shadow: 0 0 0 3px rgba(232, 168, 56, 0.1);
+}
+
+/* ---------- Badge ---------- */
+
+.badge-amber {
+  background: linear-gradient(135deg, #E8A838, #D4922E);
+  color: #0C0F17;
+  font-weight: 700;
+  box-shadow: 0 0 8px rgba(232, 168, 56, 0.4);
+}

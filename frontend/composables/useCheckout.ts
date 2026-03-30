@@ -84,7 +84,20 @@ export function useCheckout() {
   async function initStripe(clientSecret: string) {
     stripe = await loadStripe(config.public.stripeKey as string)
     if (!stripe) throw new Error('Failed to load Stripe')
-    elements = stripe.elements({ clientSecret })
+    elements = stripe.elements({
+      clientSecret,
+      appearance: {
+        theme: 'night',
+        variables: {
+          colorPrimary: '#E8A838',
+          colorBackground: '#171C28',
+          colorText: '#F0F2F5',
+          colorDanger: '#EF4444',
+          fontFamily: 'DM Sans, sans-serif',
+          borderRadius: '8px',
+        },
+      },
+    })
     const paymentElement = elements.create('payment')
     paymentElement.mount('#payment-element')
   }

@@ -1,5 +1,5 @@
 <template>
-  <span class="text-2xl font-bold text-gray-900">${{ displayPrice.toFixed(2) }}</span>
+  <span class="text-2xl font-display font-bold text-accent">${{ displayPrice.toFixed(2) }}</span>
 </template>
 
 <script setup lang="ts">

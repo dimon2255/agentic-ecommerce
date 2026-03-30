@@ -1,38 +1,61 @@
 <template>
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-    <div v-if="product">
-      <nav class="text-sm text-gray-500 mb-6">
-        <NuxtLink to="/catalog" class="hover:text-gray-700">Catalog</NuxtLink>
-        <span class="mx-2">/</span>
-        <span class="text-gray-900">{{ product.name }}</span>
+    <div v-if="product" class="animate-fade-in">
+      <nav class="text-sm text-muted mb-6 flex items-center gap-2">
+        <NuxtLink to="/catalog" class="hover:text-secondary transition-colors">Catalog</NuxtLink>
+        <span class="text-muted/50">/</span>
+        <span class="text-secondary">{{ product.name }}</span>
       </nav>
+
       <div class="grid md:grid-cols-2 gap-12">
-        <div class="aspect-square bg-gray-100 rounded-xl flex items-center justify-center overflow-hidden">
-          <img v-if="product.images?.length" :src="product.images[0]" :alt="product.name" class="w-full h-full object-cover" />
-          <span v-else class="text-gray-300 text-8xl">&#9744;</span>
+        <!-- Product Image -->
+        <div class="aspect-square bg-surface-deep rounded-2xl overflow-hidden border border-[var(--border-default)] animate-fade-in-up">
+          <img
+            v-if="product.images?.length"
+            :src="product.images[0]"
+            :alt="product.name"
+            class="w-full h-full object-cover"
+          />
+          <div v-else class="w-full h-full flex items-center justify-center">
+            <svg class="w-20 h-20 text-muted/20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="0.5">
+              <path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+            </svg>
+          </div>
         </div>
-        <div>
-          <h1 class="text-3xl font-bold text-gray-900">{{ product.name }}</h1>
-          <p v-if="product.description" class="mt-3 text-gray-600 leading-relaxed">{{ product.description }}</p>
+
+        <!-- Product Info -->
+        <div class="animate-fade-in-up delay-1">
+          <h1 class="text-3xl font-display font-bold text-[var(--text-primary)]">{{ product.name }}</h1>
+          <p v-if="product.description" class="mt-3 text-secondary leading-relaxed">{{ product.description }}</p>
+
           <div class="mt-6">
             <PriceDisplay :base-price="product.base_price" :price-override="selectedSku?.price_override" />
           </div>
-          <div v-if="skus?.length && attributes?.length" class="mt-8">
+
+          <div v-if="skus?.length && attributes?.length" class="mt-8 p-5 bg-surface rounded-xl border border-[var(--border-default)]">
             <SkuSelector :skus="skus" :attributes="formattedAttributes" @select="onSkuSelect" />
           </div>
+
           <button
-            class="mt-8 w-full bg-primary-600 text-white py-3 px-6 rounded-lg font-medium hover:bg-primary-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
+            class="mt-8 w-full btn-accent py-3.5 px-6 rounded-xl text-sm tracking-wide"
             :disabled="!selectedSku || addingToCart"
             @click="addToCart"
           >
             {{ addingToCart ? 'Adding...' : selectedSku ? 'Add to Cart' : 'Select options' }}
           </button>
-          <p v-if="addedMsg" class="mt-2 text-sm text-center" :class="addedMsg === 'Added to cart!' ? 'text-green-600' : 'text-red-600'">{{ addedMsg }}</p>
+
+          <p
+            v-if="addedMsg"
+            class="mt-3 text-sm text-center font-medium"
+            :class="addedMsg === 'Added to cart!' ? 'text-emerald-400' : 'text-red-400'"
+          >
+            {{ addedMsg }}
+          </p>
         </div>
       </div>
     </div>
     <div v-else>
-      <p class="text-gray-500">Product not found.</p>
+      <p class="text-muted">Product not found.</p>
     </div>
   </div>
 </template>

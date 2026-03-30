@@ -1,6 +1,6 @@
 <template>
-  <div class="flex items-center gap-4 py-4 border-b border-gray-100">
-    <div class="w-16 h-16 bg-gray-100 rounded-lg flex-shrink-0 overflow-hidden">
+  <div class="flex items-center gap-4 py-5 border-b border-[var(--border-default)] last:border-0">
+    <div class="w-16 h-16 bg-surface-deep rounded-lg flex-shrink-0 overflow-hidden border border-[var(--border-default)]">
       <img
         v-if="item.skus.products.images?.length"
         :src="item.skus.products.images[0]"
@@ -9,36 +9,39 @@
       />
     </div>
     <div class="flex-1 min-w-0">
-      <NuxtLink :to="`/product/${item.skus.products.slug}`" class="text-sm font-medium text-gray-900 hover:text-primary-600 truncate block">
+      <NuxtLink
+        :to="`/product/${item.skus.products.slug}`"
+        class="text-sm font-medium text-[var(--text-primary)] hover:text-accent truncate block transition-colors"
+      >
         {{ item.skus.products.name }}
       </NuxtLink>
-      <p class="text-xs text-gray-500 mt-0.5">{{ item.skus.sku_code }}</p>
-      <p class="text-sm font-medium text-gray-900 mt-1">${{ item.unit_price.toFixed(2) }}</p>
+      <p class="text-xs text-muted mt-0.5">{{ item.skus.sku_code }}</p>
+      <p class="text-sm font-medium text-accent mt-1">${{ item.unit_price.toFixed(2) }}</p>
     </div>
     <div class="flex items-center gap-2">
       <button
         @click="$emit('update', item.id, item.quantity - 1)"
         :disabled="item.quantity <= 1 || updating"
-        class="w-8 h-8 flex items-center justify-center rounded-md border border-gray-300 text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+        class="w-8 h-8 flex items-center justify-center rounded-md border border-[var(--border-strong)] text-secondary hover:text-[var(--text-primary)] hover:border-accent/30 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
       >
         -
       </button>
-      <span class="w-8 text-center text-sm font-medium">{{ item.quantity }}</span>
+      <span class="w-8 text-center text-sm font-medium text-[var(--text-primary)]">{{ item.quantity }}</span>
       <button
         @click="$emit('update', item.id, item.quantity + 1)"
         :disabled="updating"
-        class="w-8 h-8 flex items-center justify-center rounded-md border border-gray-300 text-gray-600 hover:bg-gray-50 disabled:opacity-40"
+        class="w-8 h-8 flex items-center justify-center rounded-md border border-[var(--border-strong)] text-secondary hover:text-[var(--text-primary)] hover:border-accent/30 transition-colors disabled:opacity-30"
       >
         +
       </button>
     </div>
     <div class="text-right w-20">
-      <p class="text-sm font-medium text-gray-900">${{ (item.unit_price * item.quantity).toFixed(2) }}</p>
+      <p class="text-sm font-semibold text-[var(--text-primary)]">${{ (item.unit_price * item.quantity).toFixed(2) }}</p>
     </div>
     <button
       @click="$emit('remove', item.id)"
       :disabled="updating"
-      class="text-gray-400 hover:text-red-500 transition-colors disabled:opacity-40"
+      class="text-muted hover:text-red-400 transition-colors disabled:opacity-30"
       title="Remove item"
     >
       <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
