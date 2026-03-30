@@ -14,7 +14,7 @@
     </div>
 
     <!-- Processing / Waiting for webhook -->
-    <div v-else-if="!order || order.status === 'draft'" class="text-center py-16">
+    <div v-else-if="!order || order.status === 'draft' || order.status === 'pending'" class="text-center py-16">
       <div class="w-10 h-10 border-4 border-primary-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
       <p class="text-gray-600">Confirming your payment...</p>
     </div>

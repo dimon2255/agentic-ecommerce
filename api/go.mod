@@ -9,4 +9,4 @@ require (
 
 require github.com/golang-jwt/jwt/v5 v5.3.1
 
-require github.com/stripe/stripe-go/v82 v82.5.1 // indirect
+require github.com/stripe/stripe-go/v82 v82.5.1

@@ -136,6 +136,7 @@ func (h *CheckoutHandler) StartCheckout(w http.ResponseWriter, r *http.Request) 
 			"unit_price":   item.UnitPrice,
 		}
 		if err := h.db.From("order_items").Insert(orderItemData).Execute(nil); err != nil {
+			h.db.From("orders").Delete().Eq("id", order.ID).Execute(nil)
 			response.Error(w, http.StatusInternalServerError, "failed to create order items")
 			return
 		}
@@ -144,12 +145,16 @@ func (h *CheckoutHandler) StartCheckout(w http.ResponseWriter, r *http.Request) 
 	amountCents := int64(math.Round(total * 100))
 	clientSecret, piID, err := h.payments.CreatePaymentIntent(amountCents, "usd", order.ID)
 	if err != nil {
+		h.db.From("orders").Delete().Eq("id", order.ID).Execute(nil)
 		response.Error(w, http.StatusInternalServerError, "failed to create payment intent")
 		return
 	}
 
 	h.db.From("orders").
-		Update(map[string]any{"stripe_payment_intent_id": piID}).
+		Update(map[string]any{
+			"stripe_payment_intent_id": piID,
+			"status":                   "pending",
+		}).
 		Eq("id", order.ID).
 		Execute(nil)
 
@@ -199,7 +204,7 @@ func (h *CheckoutHandler) GetOrder(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *CheckoutHandler) HandleWebhook(w http.ResponseWriter, r *http.Request) {
-	payload, err := io.ReadAll(r.Body)
+	payload, err := io.ReadAll(http.MaxBytesReader(w, r.Body, 65536))
 	if err != nil {
 		response.Error(w, http.StatusBadRequest, "failed to read request body")
 		return
