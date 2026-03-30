@@ -12,7 +12,9 @@ import (
 
 	"github.com/dimon2255/agentic-ecommerce/api/internal/cart"
 	"github.com/dimon2255/agentic-ecommerce/api/internal/catalog"
+	"github.com/dimon2255/agentic-ecommerce/api/internal/checkout"
 	"github.com/dimon2255/agentic-ecommerce/api/internal/middleware"
+	stripeClient "github.com/dimon2255/agentic-ecommerce/api/pkg/stripe"
 	"github.com/dimon2255/agentic-ecommerce/api/pkg/supabase"
 )
 
@@ -30,6 +32,9 @@ func main() {
 		log.Fatal("SUPABASE_JWT_SECRET is required")
 	}
 
+	stripeSecretKey := os.Getenv("STRIPE_SECRET_KEY")
+	stripeWebhookSecret := os.Getenv("STRIPE_WEBHOOK_SECRET")
+
 	db := supabase.NewClient(supabaseURL, supabaseKey)
 	auth := middleware.NewAuthMiddleware(jwtSecret)
 
@@ -39,6 +44,8 @@ func main() {
 	skuHandler := catalog.NewSKUHandler(db)
 	customFieldHandler := catalog.NewCustomFieldHandler(db)
 	cartHandler := cart.NewCartHandler(db)
+	stripePayments := stripeClient.NewClient(stripeSecretKey, stripeWebhookSecret)
+	checkoutHandler := checkout.NewCheckoutHandler(db, stripePayments)
 
 	r := chi.NewRouter()
 
@@ -73,7 +80,20 @@ func main() {
 			r.Use(auth.OptionalAuth)
 			r.Mount("/cart", cartHandler.Routes())
 		})
+
+		// Checkout and order routes
+		r.Route("/checkout", func(r chi.Router) {
+			r.Use(auth.OptionalAuth)
+			r.Mount("/", checkoutHandler.Routes())
+		})
+		r.Route("/orders", func(r chi.Router) {
+			r.Use(auth.OptionalAuth)
+			r.Mount("/", checkoutHandler.OrderRoutes())
+		})
 	})
+
+	// Stripe webhook — outside /api/v1, no auth (uses signature verification)
+	r.Mount("/stripe/webhook", checkoutHandler.WebhookRoutes())
 
 	port := os.Getenv("API_PORT")
 	if port == "" {
