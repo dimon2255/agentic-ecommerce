@@ -6,13 +6,14 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	supa "github.com/dimon2255/agentic-ecommerce/api/pkg/supabase"
 )
 
 func setupTestCustomFieldHandler(supabaseHandler http.HandlerFunc) (*CustomFieldHandler, *httptest.Server) {
 	server := httptest.NewServer(supabaseHandler)
-	client := supa.NewClient(server.URL, "test-key")
+	client := supa.NewClient(server.URL, "test-key", 10*time.Second)
 	handler := NewCustomFieldHandler(client)
 	return handler, server
 }

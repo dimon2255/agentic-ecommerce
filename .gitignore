@@ -15,3 +15,6 @@ dist/
 # Go build artifacts
 api/server
 api/*.exe
+
+# Local config overrides
+api/config.local.yaml

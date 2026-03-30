@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 )
 
 func TestFrom_Select_Execute(t *testing.T) {
@@ -23,7 +24,7 @@ func TestFrom_Select_Execute(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(server.URL, "test-key")
+	client := NewClient(server.URL, "test-key", 10*time.Second)
 	var result []map[string]string
 	err := client.From("categories").Select("*").Execute(&result)
 
@@ -51,7 +52,7 @@ func TestFrom_Eq_Single(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(server.URL, "test-key")
+	client := NewClient(server.URL, "test-key", 10*time.Second)
 	var result map[string]string
 	err := client.From("categories").Select("*").Eq("slug", "electronics").Single().Execute(&result)
 
@@ -82,7 +83,7 @@ func TestFrom_Insert(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(server.URL, "test-key")
+	client := NewClient(server.URL, "test-key", 10*time.Second)
 	var result []map[string]string
 	err := client.From("categories").Insert(map[string]string{"name": "Electronics"}).Execute(&result)
 
@@ -101,7 +102,7 @@ func TestFrom_Error_Response(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(server.URL, "test-key")
+	client := NewClient(server.URL, "test-key", 10*time.Second)
 	err := client.From("missing").Select("*").Execute(nil)
 
 	if err == nil {
@@ -122,7 +123,7 @@ func TestRPC(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(server.URL, "test-key")
+	client := NewClient(server.URL, "test-key", 10*time.Second)
 	var result []map[string]int
 	err := client.RPC("my_function", map[string]int{"page": 1}, &result)
 

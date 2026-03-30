@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 
@@ -16,7 +17,7 @@ import (
 
 func setupTestCartHandler(supabaseHandler http.HandlerFunc) (*CartHandler, *httptest.Server) {
 	server := httptest.NewServer(supabaseHandler)
-	client := supa.NewClient(server.URL, "test-key")
+	client := supa.NewClient(server.URL, "test-key", 10*time.Second)
 	handler := NewCartHandler(client)
 	return handler, server
 }

@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"os"
 
 	"github.com/go-chi/chi/v5"
 	chimiddleware "github.com/go-chi/chi/v5/middleware"
@@ -13,30 +12,20 @@ import (
 	"github.com/dimon2255/agentic-ecommerce/api/internal/cart"
 	"github.com/dimon2255/agentic-ecommerce/api/internal/catalog"
 	"github.com/dimon2255/agentic-ecommerce/api/internal/checkout"
+	"github.com/dimon2255/agentic-ecommerce/api/internal/config"
 	"github.com/dimon2255/agentic-ecommerce/api/internal/middleware"
 	stripeClient "github.com/dimon2255/agentic-ecommerce/api/pkg/stripe"
 	"github.com/dimon2255/agentic-ecommerce/api/pkg/supabase"
 )
 
 func main() {
-	supabaseURL := os.Getenv("SUPABASE_URL")
-	if supabaseURL == "" {
-		supabaseURL = "http://127.0.0.1:54321"
-	}
-	supabaseKey := os.Getenv("SUPABASE_SERVICE_ROLE_KEY")
-	if supabaseKey == "" {
-		log.Fatal("SUPABASE_SERVICE_ROLE_KEY is required")
-	}
-	jwtSecret := os.Getenv("SUPABASE_JWT_SECRET")
-	if jwtSecret == "" {
-		log.Fatal("SUPABASE_JWT_SECRET is required")
+	cfg, err := config.Load()
+	if err != nil {
+		log.Fatal(err)
 	}
 
-	stripeSecretKey := os.Getenv("STRIPE_SECRET_KEY")
-	stripeWebhookSecret := os.Getenv("STRIPE_WEBHOOK_SECRET")
-
-	db := supabase.NewClient(supabaseURL, supabaseKey)
-	auth := middleware.NewAuthMiddleware(jwtSecret)
+	db := supabase.NewClient(cfg.Supabase.URL, cfg.Supabase.ServiceRoleKey, cfg.Supabase.Timeout)
+	auth := middleware.NewAuthMiddleware(cfg.Supabase.JWTSecret)
 
 	categoryHandler := catalog.NewCategoryHandler(db)
 	attributeHandler := catalog.NewAttributeHandler(db)
@@ -44,19 +33,19 @@ func main() {
 	skuHandler := catalog.NewSKUHandler(db)
 	customFieldHandler := catalog.NewCustomFieldHandler(db)
 	cartHandler := cart.NewCartHandler(db)
-	stripePayments := stripeClient.NewClient(stripeSecretKey, stripeWebhookSecret)
-	checkoutHandler := checkout.NewCheckoutHandler(db, stripePayments)
+	stripePayments := stripeClient.NewClient(cfg.Stripe.SecretKey, cfg.Stripe.WebhookSecret)
+	checkoutHandler := checkout.NewCheckoutHandler(db, stripePayments, cfg.Checkout.PaymentCurrency, cfg.Checkout.WebhookMaxBodySize)
 
 	r := chi.NewRouter()
 
 	r.Use(chimiddleware.Logger)
 	r.Use(chimiddleware.Recoverer)
 	r.Use(cors.Handler(cors.Options{
-		AllowedOrigins:   []string{"http://localhost:3000", "http://localhost:3001"},
+		AllowedOrigins:   cfg.CORS.AllowedOrigins,
 		AllowedMethods:   []string{"GET", "POST", "PATCH", "DELETE", "OPTIONS"},
 		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-Session-ID"},
 		AllowCredentials: true,
-		MaxAge:           300,
+		MaxAge:           cfg.CORS.MaxAge,
 	}))
 
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
@@ -95,11 +84,7 @@ func main() {
 	// Stripe webhook — outside /api/v1, no auth (uses signature verification)
 	r.Mount("/stripe/webhook", checkoutHandler.WebhookRoutes())
 
-	port := os.Getenv("API_PORT")
-	if port == "" {
-		port = "9090"
-	}
-
-	fmt.Printf("API server listening on :%s\n", port)
-	log.Fatal(http.ListenAndServe(":"+port, r))
+	addr := fmt.Sprintf(":%d", cfg.Server.Port)
+	fmt.Printf("API server listening on %s\n", addr)
+	log.Fatal(http.ListenAndServe(addr, r))
 }

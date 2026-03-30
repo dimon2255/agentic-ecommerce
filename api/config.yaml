@@ -1,0 +1,16 @@
+server:
+  port: 9090
+
+supabase:
+  url: http://127.0.0.1:54321
+  timeout: 10s
+
+cors:
+  allowed_origins:
+    - http://localhost:3000
+    - http://localhost:3001
+  max_age: 300
+
+checkout:
+  payment_currency: usd
+  webhook_max_body_size: 65536

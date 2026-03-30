@@ -14,12 +14,19 @@ import (
 )
 
 type CheckoutHandler struct {
-	db       *supabase.Client
-	payments PaymentService
+	db                 *supabase.Client
+	payments           PaymentService
+	paymentCurrency    string
+	webhookMaxBodySize int64
 }
 
-func NewCheckoutHandler(db *supabase.Client, payments PaymentService) *CheckoutHandler {
-	return &CheckoutHandler{db: db, payments: payments}
+func NewCheckoutHandler(db *supabase.Client, payments PaymentService, paymentCurrency string, webhookMaxBodySize int64) *CheckoutHandler {
+	return &CheckoutHandler{
+		db:                 db,
+		payments:           payments,
+		paymentCurrency:    paymentCurrency,
+		webhookMaxBodySize: webhookMaxBodySize,
+	}
 }
 
 func (h *CheckoutHandler) Routes() chi.Router {
@@ -143,7 +150,7 @@ func (h *CheckoutHandler) StartCheckout(w http.ResponseWriter, r *http.Request) 
 	}
 
 	amountCents := int64(math.Round(total * 100))
-	clientSecret, piID, err := h.payments.CreatePaymentIntent(amountCents, "usd", order.ID)
+	clientSecret, piID, err := h.payments.CreatePaymentIntent(amountCents, h.paymentCurrency, order.ID)
 	if err != nil {
 		h.db.From("orders").Delete().Eq("id", order.ID).Execute(nil)
 		response.Error(w, http.StatusInternalServerError, "failed to create payment intent")
@@ -204,7 +211,7 @@ func (h *CheckoutHandler) GetOrder(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *CheckoutHandler) HandleWebhook(w http.ResponseWriter, r *http.Request) {
-	payload, err := io.ReadAll(http.MaxBytesReader(w, r.Body, 65536))
+	payload, err := io.ReadAll(http.MaxBytesReader(w, r.Body, h.webhookMaxBodySize))
 	if err != nil {
 		response.Error(w, http.StatusBadRequest, "failed to read request body")
 		return

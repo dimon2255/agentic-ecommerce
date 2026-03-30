@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 
@@ -35,12 +36,12 @@ func (m *mockPayments) VerifyWebhook(payload []byte, sigHeader string) (string, 
 func newTestHandler(t *testing.T, mux *http.ServeMux) (*CheckoutHandler, *httptest.Server) {
 	server := httptest.NewServer(mux)
 	t.Cleanup(server.Close)
-	db := supabase.NewClient(server.URL, "test-key")
+	db := supabase.NewClient(server.URL, "test-key", 10*time.Second)
 	payments := &mockPayments{
 		clientSecret:    "pi_test_secret_123",
 		paymentIntentID: "pi_test_id_123",
 	}
-	return NewCheckoutHandler(db, payments), server
+	return NewCheckoutHandler(db, payments, "usd", 65536), server
 }
 
 func TestStartCheckout_Success(t *testing.T) {
@@ -219,12 +220,12 @@ func TestHandleWebhook_PaymentSucceeded(t *testing.T) {
 
 	server := httptest.NewServer(mux)
 	t.Cleanup(server.Close)
-	db := supabase.NewClient(server.URL, "test-key")
+	db := supabase.NewClient(server.URL, "test-key", 10*time.Second)
 	payments := &mockPayments{
 		eventType:   "payment_intent.succeeded",
 		webhookPIID: "pi_123",
 	}
-	handler := NewCheckoutHandler(db, payments)
+	handler := NewCheckoutHandler(db, payments, "usd", 65536)
 
 	req := httptest.NewRequest("POST", "/stripe/webhook", strings.NewReader(`{}`))
 	req.Header.Set("Stripe-Signature", "valid-sig")
@@ -246,12 +247,12 @@ func TestHandleWebhook_PaymentFailed(t *testing.T) {
 
 	server := httptest.NewServer(mux)
 	t.Cleanup(server.Close)
-	db := supabase.NewClient(server.URL, "test-key")
+	db := supabase.NewClient(server.URL, "test-key", 10*time.Second)
 	payments := &mockPayments{
 		eventType:   "payment_intent.payment_failed",
 		webhookPIID: "pi_456",
 	}
-	handler := NewCheckoutHandler(db, payments)
+	handler := NewCheckoutHandler(db, payments, "usd", 65536)
 
 	req := httptest.NewRequest("POST", "/stripe/webhook", strings.NewReader(`{}`))
 	req.Header.Set("Stripe-Signature", "valid-sig")
@@ -266,7 +267,8 @@ func TestHandleWebhook_PaymentFailed(t *testing.T) {
 
 func TestHandleWebhook_InvalidSignature(t *testing.T) {
 	handler := &CheckoutHandler{
-		payments: &mockPayments{webhookErr: fmt.Errorf("invalid signature")},
+		payments:           &mockPayments{webhookErr: fmt.Errorf("invalid signature")},
+		webhookMaxBodySize: 65536,
 	}
 
 	req := httptest.NewRequest("POST", "/stripe/webhook", strings.NewReader(`{}`))
