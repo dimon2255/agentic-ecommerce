@@ -18,3 +18,7 @@ api/*.exe
 
 # Local config overrides
 api/config.local.yaml
+
+# Playwright screenshots
+*.png
+!docs/screenshots/*.png
