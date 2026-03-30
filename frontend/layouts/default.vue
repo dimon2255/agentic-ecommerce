@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen bg-surface-base text-[var(--text-primary)]">
+  <div class="min-h-screen bg-surface-base text-[var(--text-primary)] flex flex-col">
     <header class="fixed top-0 inset-x-0 z-50 glass-strong">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="flex justify-between items-center h-16">
@@ -51,10 +51,10 @@
         </div>
       </div>
     </header>
-    <main class="pt-16">
+    <main class="pt-16 flex-1">
       <slot />
     </main>
-    <footer class="border-t border-[var(--border-default)] mt-20">
+    <footer class="border-t border-[var(--border-default)]">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex items-center justify-between">
         <p class="text-sm text-muted">
           &copy; {{ new Date().getFullYear() }} FlexShop
