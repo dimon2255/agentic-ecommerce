@@ -1,22 +1,23 @@
 <template>
   <NuxtLink
     :to="`/catalog/${category.slug}`"
-    class="group block bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow"
+    class="group block card-dark glow-hover overflow-hidden"
   >
-    <div class="aspect-[4/3] flex items-center justify-content-center relative overflow-hidden" :class="gradientClass">
+    <div class="aspect-[4/3] relative overflow-hidden" :class="gradientClass">
+      <div class="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors duration-500"></div>
       <div class="absolute inset-0 flex items-center justify-center">
-        <span class="text-6xl font-bold text-white/30 group-hover:scale-110 transition-transform select-none">
+        <span class="text-7xl font-display font-bold text-white/10 group-hover:text-white/20 group-hover:scale-110 transition-all duration-500 select-none">
           {{ category.name.charAt(0) }}
         </span>
       </div>
       <div class="absolute bottom-3 left-3 right-3">
-        <span class="inline-block px-2 py-1 bg-white/20 backdrop-blur-sm rounded text-xs text-white/80 font-medium">
+        <span class="inline-block px-2.5 py-1 bg-white/10 backdrop-blur-md rounded-md text-xs text-white/70 font-medium">
           {{ label }}
         </span>
       </div>
     </div>
     <div class="p-4">
-      <h3 class="font-semibold text-gray-900 group-hover:text-primary-600 transition-colors">
+      <h3 class="font-display font-semibold text-[var(--text-primary)] group-hover:text-accent transition-colors">
         {{ category.name }}
       </h3>
     </div>
@@ -29,12 +30,12 @@ const props = defineProps<{
 }>()
 
 const gradients = [
-  'bg-gradient-to-br from-blue-500 to-indigo-600',
-  'bg-gradient-to-br from-emerald-500 to-teal-600',
-  'bg-gradient-to-br from-orange-500 to-rose-600',
-  'bg-gradient-to-br from-violet-500 to-purple-600',
-  'bg-gradient-to-br from-cyan-500 to-blue-600',
-  'bg-gradient-to-br from-pink-500 to-fuchsia-600',
+  'bg-gradient-to-br from-amber-700/60 to-orange-900/60',
+  'bg-gradient-to-br from-emerald-700/60 to-teal-900/60',
+  'bg-gradient-to-br from-rose-700/60 to-pink-900/60',
+  'bg-gradient-to-br from-violet-700/60 to-indigo-900/60',
+  'bg-gradient-to-br from-cyan-700/60 to-blue-900/60',
+  'bg-gradient-to-br from-fuchsia-700/60 to-purple-900/60',
 ]
 
 const hash = props.category.name.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0)

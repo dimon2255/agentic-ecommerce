@@ -1,113 +1,116 @@
 <template>
   <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-    <h1 class="text-2xl font-bold text-gray-900 mb-8">Checkout</h1>
+    <h1 class="text-2xl font-display font-bold text-[var(--text-primary)] mb-8 animate-fade-in-up">Checkout</h1>
 
-    <div v-if="cartLoading" class="text-gray-500">Loading...</div>
+    <div v-if="cartLoading" class="text-muted animate-fade-in">Loading...</div>
 
-    <div v-else-if="!cart?.items?.length" class="text-center py-16">
-      <p class="text-gray-500 mb-4">Your cart is empty</p>
-      <NuxtLink to="/catalog" class="text-primary-600 hover:text-primary-700 font-medium">
+    <div v-else-if="!cart?.items?.length" class="text-center py-20 animate-fade-in">
+      <p class="text-muted mb-4">Your cart is empty</p>
+      <NuxtLink to="/catalog" class="text-accent hover:text-accent-hover font-medium transition-colors">
         Browse catalog
       </NuxtLink>
     </div>
 
-    <div v-else>
-      <!-- Order Summary -->
-      <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
-        <h2 class="text-lg font-semibold text-gray-900 mb-4">Order Summary</h2>
-        <div v-for="item in cart.items" :key="item.id" class="flex justify-between py-2 border-b border-gray-100 last:border-0">
-          <div>
-            <span class="font-medium text-gray-900">{{ item.skus.products.name }}</span>
-            <span class="text-sm text-gray-500 ml-2">{{ item.skus.sku_code }}</span>
-            <span class="text-sm text-gray-500 ml-2">x{{ item.quantity }}</span>
-          </div>
-          <span class="text-gray-900">${{ (item.unit_price * item.quantity).toFixed(2) }}</span>
+    <div v-else class="space-y-6 animate-fade-in-up delay-1">
+      <!-- Step Indicator -->
+      <div class="flex items-center gap-3 mb-2">
+        <div class="flex items-center gap-2">
+          <div :class="['w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold', step === 'shipping' ? 'btn-accent' : 'bg-accent/20 text-accent']">1</div>
+          <span :class="['text-sm font-medium', step === 'shipping' ? 'text-[var(--text-primary)]' : 'text-secondary']">Shipping</span>
         </div>
-        <div class="flex justify-between mt-4 pt-3 border-t border-gray-200 text-lg font-bold text-gray-900">
-          <span>Total</span>
-          <span>${{ cartTotal.toFixed(2) }}</span>
+        <div class="flex-1 h-px bg-[var(--border-default)]"></div>
+        <div class="flex items-center gap-2">
+          <div :class="['w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold', step === 'payment' ? 'btn-accent' : 'bg-surface-elevated border border-[var(--border-default)] text-muted']">2</div>
+          <span :class="['text-sm font-medium', step === 'payment' ? 'text-[var(--text-primary)]' : 'text-muted']">Payment</span>
+        </div>
+      </div>
+
+      <!-- Order Summary -->
+      <div class="card-dark p-6">
+        <h2 class="text-sm font-medium text-muted uppercase tracking-wider mb-4">Order Summary</h2>
+        <div v-for="item in cart.items" :key="item.id" class="flex justify-between py-2.5 border-b border-[var(--border-subtle)] last:border-0">
+          <div>
+            <span class="font-medium text-[var(--text-primary)] text-sm">{{ item.skus.products.name }}</span>
+            <span class="text-xs text-muted ml-2 font-mono">{{ item.skus.sku_code }}</span>
+            <span class="text-xs text-muted ml-2">&times;{{ item.quantity }}</span>
+          </div>
+          <span class="text-sm text-secondary">${{ (item.unit_price * item.quantity).toFixed(2) }}</span>
+        </div>
+        <div class="flex justify-between mt-4 pt-3 border-t border-[var(--border-default)] font-display font-bold">
+          <span class="text-[var(--text-primary)]">Total</span>
+          <span class="text-accent">${{ cartTotal.toFixed(2) }}</span>
         </div>
       </div>
 
       <!-- Price Change Warning -->
-      <div v-if="priceChanges.length" class="bg-yellow-50 border border-yellow-200 rounded-xl p-4 mb-6">
-        <p class="font-medium text-yellow-800">Some prices have been updated:</p>
-        <ul class="mt-2 text-sm text-yellow-700">
+      <div v-if="priceChanges.length" class="bg-amber-900/20 border border-amber-700/30 rounded-xl p-4">
+        <p class="font-medium text-amber-300 text-sm">Some prices have been updated:</p>
+        <ul class="mt-2 text-sm text-amber-400/80">
           <li v-for="change in priceChanges" :key="change.sku_id">
             {{ change.sku_code }}: ${{ change.old_price.toFixed(2) }} &rarr; ${{ change.new_price.toFixed(2) }}
           </li>
         </ul>
-        <p class="mt-2 text-sm text-yellow-700">Your cart has been updated. Please review and try again.</p>
+        <p class="mt-2 text-sm text-amber-400/80">Your cart has been updated. Please review and try again.</p>
       </div>
 
       <!-- Step 1: Shipping Form -->
-      <div v-if="step === 'shipping'" class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-        <h2 class="text-lg font-semibold text-gray-900 mb-4">Shipping Information</h2>
+      <div v-if="step === 'shipping'" class="card-dark p-6">
+        <h2 class="text-sm font-medium text-muted uppercase tracking-wider mb-5">Shipping Information</h2>
         <form @submit.prevent="handleStartCheckout" class="space-y-4">
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
-            <input v-model="form.email" type="email" required
-              class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:border-primary-500" />
+            <label class="block text-sm font-medium text-secondary mb-1.5">Email</label>
+            <input v-model="form.email" type="email" required class="input-dark" />
           </div>
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
-            <input v-model="form.name" type="text" required
-              class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:border-primary-500" />
+            <label class="block text-sm font-medium text-secondary mb-1.5">Full Name</label>
+            <input v-model="form.name" type="text" required class="input-dark" />
           </div>
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Address</label>
-            <input v-model="form.line1" type="text" required
-              class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:border-primary-500" />
+            <label class="block text-sm font-medium text-secondary mb-1.5">Address</label>
+            <input v-model="form.line1" type="text" required class="input-dark" />
           </div>
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Apartment, suite, etc. (optional)</label>
-            <input v-model="form.line2" type="text"
-              class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:border-primary-500" />
+            <label class="block text-sm font-medium text-secondary mb-1.5">Apartment, suite, etc. (optional)</label>
+            <input v-model="form.line2" type="text" class="input-dark" />
           </div>
           <div class="grid grid-cols-2 gap-4">
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">City</label>
-              <input v-model="form.city" type="text" required
-                class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:border-primary-500" />
+              <label class="block text-sm font-medium text-secondary mb-1.5">City</label>
+              <input v-model="form.city" type="text" required class="input-dark" />
             </div>
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">State / Province</label>
-              <input v-model="form.state" type="text"
-                class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:border-primary-500" />
+              <label class="block text-sm font-medium text-secondary mb-1.5">State / Province</label>
+              <input v-model="form.state" type="text" class="input-dark" />
             </div>
           </div>
           <div class="grid grid-cols-2 gap-4">
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">ZIP / Postal Code</label>
-              <input v-model="form.zip" type="text" required
-                class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:border-primary-500" />
+              <label class="block text-sm font-medium text-secondary mb-1.5">ZIP / Postal Code</label>
+              <input v-model="form.zip" type="text" required class="input-dark" />
             </div>
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Country</label>
-              <input v-model="form.country" type="text" required
-                class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:border-primary-500" />
+              <label class="block text-sm font-medium text-secondary mb-1.5">Country</label>
+              <input v-model="form.country" type="text" required class="input-dark" />
             </div>
           </div>
 
-          <button type="submit" :disabled="checkoutLoading"
-            class="w-full bg-primary-600 text-white py-3 rounded-lg font-medium hover:bg-primary-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed">
+          <button type="submit" :disabled="checkoutLoading" class="w-full btn-accent py-3.5 rounded-xl text-sm tracking-wide mt-2">
             {{ checkoutLoading ? 'Processing...' : 'Continue to Payment' }}
           </button>
 
-          <p v-if="checkoutError" class="text-red-600 text-sm text-center">{{ checkoutError }}</p>
+          <p v-if="checkoutError" class="text-red-400 text-sm text-center">{{ checkoutError }}</p>
         </form>
       </div>
 
       <!-- Step 2: Payment -->
-      <div v-if="step === 'payment'" class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-        <h2 class="text-lg font-semibold text-gray-900 mb-4">Payment</h2>
+      <div v-if="step === 'payment'" class="card-dark p-6">
+        <h2 class="text-sm font-medium text-muted uppercase tracking-wider mb-5">Payment</h2>
         <div id="payment-element" class="mb-6"></div>
-        <button @click="handlePayment" :disabled="paying"
-          class="w-full bg-primary-600 text-white py-3 rounded-lg font-medium hover:bg-primary-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed">
+        <button @click="handlePayment" :disabled="paying" class="w-full btn-accent py-3.5 rounded-xl text-sm tracking-wide">
           {{ paying ? 'Processing payment...' : `Pay $${cartTotal.toFixed(2)}` }}
         </button>
-        <p v-if="paymentError" class="text-red-600 text-sm text-center mt-2">{{ paymentError }}</p>
-        <button @click="step = 'shipping'" class="w-full text-sm text-gray-500 hover:text-gray-700 mt-3">
+        <p v-if="paymentError" class="text-red-400 text-sm text-center mt-3">{{ paymentError }}</p>
+        <button @click="step = 'shipping'" class="w-full text-sm text-muted hover:text-secondary mt-4 transition-colors">
           Back to shipping
         </button>
       </div>
