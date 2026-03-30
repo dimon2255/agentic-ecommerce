@@ -28,13 +28,12 @@
           <span>Total</span>
           <span>${{ total.toFixed(2) }}</span>
         </div>
-        <button
-          disabled
-          class="mt-4 w-full bg-gray-300 text-white py-3 rounded-lg font-medium cursor-not-allowed"
-          title="Checkout coming in Plan 3"
+        <NuxtLink
+          to="/checkout"
+          class="mt-4 w-full bg-primary-600 text-white py-3 rounded-lg font-medium hover:bg-primary-700 transition-colors text-center block"
         >
           Proceed to Checkout
-        </button>
+        </NuxtLink>
       </div>
     </div>
   </div>
