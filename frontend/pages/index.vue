@@ -18,7 +18,7 @@
     </section>
     <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
       <h2 class="text-2xl font-bold text-gray-900 mb-6">Shop by Category</h2>
-      <div v-if="categories.length" class="grid grid-cols-2 md:grid-cols-4 gap-6">
+      <div v-if="categories?.length" class="grid grid-cols-2 md:grid-cols-4 gap-6">
         <CategoryCard v-for="cat in categories" :key="cat.id" :category="cat" />
       </div>
       <p v-else class="text-gray-500">No categories available.</p>
