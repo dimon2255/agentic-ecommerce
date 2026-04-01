@@ -11,13 +11,14 @@ import (
 
 // Client wraps the Stripe API. Implements checkout.PaymentService.
 type Client struct {
+	secretKey     string
 	webhookSecret string
 }
 
-// NewClient sets the Stripe API key globally and returns a client.
+// NewClient creates a Stripe client with the given keys.
 func NewClient(secretKey, webhookSecret string) *Client {
 	gostripe.Key = secretKey
-	return &Client{webhookSecret: webhookSecret}
+	return &Client{secretKey: secretKey, webhookSecret: webhookSecret}
 }
 
 func (c *Client) CreatePaymentIntent(amountCents int64, currency, orderID string) (string, string, error) {

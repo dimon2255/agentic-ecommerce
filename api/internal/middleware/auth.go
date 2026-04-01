@@ -16,10 +16,30 @@ const UserIDKey contextKey = "user_id"
 
 type AuthMiddleware struct {
 	jwtSecret []byte
+	issuer    string
+	audience  string
 }
 
-func NewAuthMiddleware(jwtSecret string) *AuthMiddleware {
-	return &AuthMiddleware{jwtSecret: []byte(jwtSecret)}
+// NewAuthMiddleware creates auth middleware. Issuer and audience are optional —
+// if non-empty, JWT claims are validated against them.
+func NewAuthMiddleware(jwtSecret, issuer, audience string) *AuthMiddleware {
+	return &AuthMiddleware{
+		jwtSecret: []byte(jwtSecret),
+		issuer:    issuer,
+		audience:  audience,
+	}
+}
+
+// parserOptions returns JWT parser options for algorithm, issuer, and audience validation.
+func (m *AuthMiddleware) parserOptions() []jwt.ParserOption {
+	opts := []jwt.ParserOption{jwt.WithValidMethods([]string{"HS256"})}
+	if m.issuer != "" {
+		opts = append(opts, jwt.WithIssuer(m.issuer))
+	}
+	if m.audience != "" {
+		opts = append(opts, jwt.WithAudience(m.audience))
+	}
+	return opts
 }
 
 // OptionalAuth extracts user ID from JWT if present. Request proceeds regardless.
@@ -28,11 +48,8 @@ func (m *AuthMiddleware) OptionalAuth(next http.Handler) http.Handler {
 		tokenStr := extractBearerToken(r)
 		if tokenStr != "" {
 			token, err := jwt.Parse(tokenStr, func(token *jwt.Token) (any, error) {
-				if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-					return nil, jwt.ErrSignatureInvalid
-				}
 				return m.jwtSecret, nil
-			})
+			}, m.parserOptions()...)
 			if err == nil && token.Valid {
 				if claims, ok := token.Claims.(jwt.MapClaims); ok {
 					if sub, ok := claims["sub"].(string); ok {
@@ -55,11 +72,8 @@ func (m *AuthMiddleware) RequireAuth(next http.Handler) http.Handler {
 			return
 		}
 		token, err := jwt.Parse(tokenStr, func(token *jwt.Token) (any, error) {
-			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-				return nil, jwt.ErrSignatureInvalid
-			}
 			return m.jwtSecret, nil
-		})
+		}, m.parserOptions()...)
 		if err != nil || !token.Valid {
 			response.Error(w, http.StatusUnauthorized, "invalid token")
 			return

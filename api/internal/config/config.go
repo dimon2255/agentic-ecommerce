@@ -19,13 +19,16 @@ type Config struct {
 }
 
 type ServerConfig struct {
-	Port int `mapstructure:"port"`
+	Port           int           `mapstructure:"port"`
+	RequestTimeout time.Duration `mapstructure:"request_timeout"`
 }
 
 type SupabaseConfig struct {
 	URL            string        `mapstructure:"url"`
 	ServiceRoleKey string        `mapstructure:"service_role_key"`
 	JWTSecret      string        `mapstructure:"jwt_secret"`
+	JWTIssuer      string        `mapstructure:"jwt_issuer"`
+	JWTAudience    string        `mapstructure:"jwt_audience"`
 	Timeout        time.Duration `mapstructure:"timeout"`
 }
 
@@ -58,6 +61,7 @@ func Load(configPaths ...string) (*Config, error) {
 
 	// Defaults
 	v.SetDefault("server.port", 9090)
+	v.SetDefault("server.request_timeout", "30s")
 	v.SetDefault("supabase.url", "http://127.0.0.1:54321")
 	v.SetDefault("supabase.timeout", "10s")
 	v.SetDefault("cors.allowed_origins", []string{"http://localhost:3000", "http://localhost:3001"})
@@ -84,9 +88,12 @@ func Load(configPaths ...string) (*Config, error) {
 	// Bind all config keys to env vars so Unmarshal picks them up
 	for _, key := range []string{
 		"server.port",
+		"server.request_timeout",
 		"supabase.url",
 		"supabase.service_role_key",
 		"supabase.jwt_secret",
+		"supabase.jwt_issuer",
+		"supabase.jwt_audience",
 		"supabase.timeout",
 		"stripe.secret_key",
 		"stripe.webhook_secret",
