@@ -28,6 +28,7 @@ export function useCart() {
 
   const cart = useState<CartData | null>('cart', () => null)
   const loading = useState('cart-loading', () => false)
+  const initialized = useState('cart-initialized', () => false)
 
   async function getHeaders(): Promise<Record<string, string>> {
     const headers: Record<string, string> = {}
@@ -53,12 +54,14 @@ export function useCart() {
     return headers
   }
 
-  async function refresh() {
+  async function refresh(force = false) {
     if (!import.meta.client) return
+    if (initialized.value && !force) return
     loading.value = true
     try {
       const headers = await getHeaders()
       cart.value = await get<CartData>('/cart', headers)
+      initialized.value = true
     } catch {
       cart.value = null
     } finally {

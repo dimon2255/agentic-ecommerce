@@ -16,7 +16,11 @@
     <!-- Processing / Waiting for webhook -->
     <div v-else-if="!order || order.status === 'draft' || order.status === 'pending'" aria-live="polite" class="text-center py-20 animate-fade-in">
       <div class="w-12 h-12 border-[3px] border-accent border-t-transparent rounded-full animate-spin mx-auto mb-5"></div>
-      <p class="text-secondary">Confirming your payment...</p>
+      <p class="text-secondary">{{ pollingTimedOut ? '' : 'Confirming your payment...' }}</p>
+      <div v-if="pollingTimedOut" class="mt-4 space-y-2">
+        <p class="text-secondary">Payment confirmation is taking longer than expected.</p>
+        <p class="text-sm text-muted">Your order reference is <span class="font-mono text-accent">{{ orderId.slice(0, 8) }}</span>. Please check back later.</p>
+      </div>
     </div>
 
     <!-- Order Confirmed -->
@@ -84,6 +88,7 @@ const orderId = route.params.id as string
 const redirectStatus = (route.query.redirect_status as string) || ''
 
 const order = ref<OrderResponse | null>(null)
+const pollingTimedOut = ref(false)
 
 onMounted(() => {
   if (redirectStatus === 'failed') return
@@ -98,5 +103,6 @@ async function pollOrderStatus() {
     } catch {}
     await new Promise(resolve => setTimeout(resolve, 2000))
   }
+  pollingTimedOut.value = true
 }
 </script>

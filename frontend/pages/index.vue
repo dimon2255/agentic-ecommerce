@@ -47,7 +47,8 @@
 <script setup lang="ts">
 const { get } = useApi()
 
-const { data: categories } = await useAsyncData('categories', () =>
-  get<Array<{ id: string; name: string; slug: string }>>('/categories?parent_id=null')
-)
+const { data: categories } = await useAsyncData('categories', async () => {
+  const result = await get<{ items: Array<{ id: string; name: string; slug: string }> }>('/categories?parent_id=null')
+  return result.items ?? result
+})
 </script>

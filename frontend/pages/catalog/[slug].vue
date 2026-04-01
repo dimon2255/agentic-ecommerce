@@ -54,26 +54,21 @@ const { data: category } = await useAsyncData(`category-${slug}`, () =>
   get<{ id: string; name: string; slug: string }>(`/categories/${slug}`)
 )
 
-const { data: subcategories } = await useAsyncData(`subcats-${slug}`, () =>
-  category.value
-    ? get<Array<{ id: string; name: string; slug: string }>>(`/categories?parent_id=${category.value.id}`)
-    : Promise.resolve([])
-)
+const { data: subcategories } = await useAsyncData(`subcats-${slug}`, async () => {
+  if (!category.value) return []
+  const result = await get<{ items: Array<{ id: string; name: string; slug: string }> }>(`/categories?parent_id=${category.value.id}`)
+  return result.items ?? result
+})
 
-const { data: products } = await useAsyncData(`products-${slug}`, async () => {
+const { data: products, pending: productsLoading } = await useAsyncData(`products-${slug}`, async () => {
   if (!category.value) return []
 
-  // Fetch products from this category
-  const direct = await get<Array<any>>(`/products?category_id=${category.value.id}`)
-
-  // Also fetch products from subcategories
+  // Single API call with all category IDs (fixes N+1)
+  const ids = [category.value.id]
   if (subcategories.value?.length) {
-    const nested = await Promise.all(
-      subcategories.value.map(sub => get<Array<any>>(`/products?category_id=${sub.id}`))
-    )
-    return [...direct, ...nested.flat()]
+    ids.push(...subcategories.value.map(s => s.id))
   }
-
-  return direct
+  const result = await get<{ items: Array<any> }>(`/products?category_ids=${ids.join(',')}`)
+  return result.items ?? result
 })
 </script>
