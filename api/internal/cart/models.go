@@ -1,6 +1,10 @@
 package cart
 
-import "time"
+import (
+	"time"
+
+	"github.com/dimon2255/agentic-ecommerce/api/internal/validate"
+)
 
 // --- Database Models ---
 
@@ -71,6 +75,26 @@ type UpdateItemRequest struct {
 	Quantity int `json:"quantity"`
 }
 
+func (r *AddItemRequest) Validate() error {
+	v := validate.New()
+	v.Required("sku_id", r.SKUID)
+	v.UUID("sku_id", r.SKUID)
+	v.IntRange("quantity", r.Quantity, 1, 999)
+	return v.Validate()
+}
+
+func (r *UpdateItemRequest) Validate() error {
+	v := validate.New()
+	v.IntRange("quantity", r.Quantity, 1, 999)
+	return v.Validate()
+}
+
 type MergeCartRequest struct {
 	SessionID string `json:"session_id"`
+}
+
+func (r *MergeCartRequest) Validate() error {
+	v := validate.New()
+	v.Required("session_id", r.SessionID)
+	return v.Validate()
 }
