@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strconv"
 	"time"
 )
 
@@ -70,6 +71,23 @@ func (q *QueryBuilder) In(column string, values []string) *QueryBuilder {
 		joined += `"` + v + `"`
 	}
 	q.params.Set(column, "in.("+joined+")")
+	return q
+}
+
+func (q *QueryBuilder) Ilike(column, pattern string) *QueryBuilder {
+	q.params.Set(column, "ilike.*"+pattern+"*")
+	return q
+}
+
+func (q *QueryBuilder) Fts(column, query string) *QueryBuilder {
+	q.params.Set(column, "fts."+query)
+	return q
+}
+
+// CountExact requests PostgREST to return the total count in the Content-Range header.
+// Must be called before Execute. The count is returned via ExecuteWithCount.
+func (q *QueryBuilder) CountExact() *QueryBuilder {
+	q.headers["Prefer"] = "count=exact"
 	return q
 }
 
@@ -164,6 +182,80 @@ func (q *QueryBuilder) Execute(result any) error {
 	}
 
 	return nil
+}
+
+// ExecuteWithCount runs the query and parses the Content-Range header for total count.
+// Requires CountExact() to be called on the query builder.
+// Content-Range format: "0-9/42" where 42 is the total count.
+func (q *QueryBuilder) ExecuteWithCount(result any) (int, error) {
+	reqURL := fmt.Sprintf("%s/rest/v1/%s", q.client.baseURL, q.table)
+	if len(q.params) > 0 {
+		reqURL += "?" + q.params.Encode()
+	}
+
+	var bodyReader io.Reader
+	if q.body != nil {
+		jsonBody, err := json.Marshal(q.body)
+		if err != nil {
+			return 0, fmt.Errorf("marshal body: %w", err)
+		}
+		bodyReader = bytes.NewReader(jsonBody)
+	}
+
+	req, err := http.NewRequest(q.method, reqURL, bodyReader)
+	if err != nil {
+		return 0, fmt.Errorf("create request: %w", err)
+	}
+
+	req.Header.Set("apikey", q.client.apiKey)
+	req.Header.Set("Authorization", "Bearer "+q.client.apiKey)
+	req.Header.Set("Content-Type", "application/json")
+	for k, v := range q.headers {
+		req.Header.Set(k, v)
+	}
+
+	resp, err := q.client.httpClient.Do(req)
+	if err != nil {
+		return 0, fmt.Errorf("execute request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return 0, fmt.Errorf("read response: %w", err)
+	}
+
+	if resp.StatusCode >= 400 {
+		return 0, fmt.Errorf("supabase error (status %d): %s", resp.StatusCode, string(respBody))
+	}
+
+	// Parse total count from Content-Range header: "0-9/42"
+	total := 0
+	cr := resp.Header.Get("Content-Range")
+	if cr != "" {
+		if idx := lastIndexByte(cr, '/'); idx >= 0 {
+			if n, err := strconv.Atoi(cr[idx+1:]); err == nil {
+				total = n
+			}
+		}
+	}
+
+	if result != nil && len(respBody) > 0 {
+		if err := json.Unmarshal(respBody, result); err != nil {
+			return 0, fmt.Errorf("unmarshal response: %w", err)
+		}
+	}
+
+	return total, nil
+}
+
+func lastIndexByte(s string, c byte) int {
+	for i := len(s) - 1; i >= 0; i-- {
+		if s[i] == c {
+			return i
+		}
+	}
+	return -1
 }
 
 func (c *Client) RPC(functionName string, params any, result any) error {

@@ -5,14 +5,14 @@ import "context"
 // Service defines business operations for the catalog domain.
 type Service interface {
 	// Categories
-	ListCategories(ctx context.Context, filter CategoryFilter) ([]Category, error)
+	ListCategories(ctx context.Context, filter CategoryFilter) ([]Category, int, error)
 	GetCategoryBySlug(ctx context.Context, slug string) (*Category, error)
 	CreateCategory(ctx context.Context, req CreateCategoryRequest) (*Category, error)
 	UpdateCategory(ctx context.Context, slug string, req UpdateCategoryRequest) (*Category, error)
 	DeleteCategory(ctx context.Context, slug string) error
 
 	// Products
-	ListProducts(ctx context.Context, filter ProductFilter) ([]Product, error)
+	ListProducts(ctx context.Context, filter ProductFilter) ([]Product, int, error)
 	GetProductBySlug(ctx context.Context, slug string) (*Product, error)
 	CreateProduct(ctx context.Context, req CreateProductRequest) (*Product, error)
 	UpdateProduct(ctx context.Context, slug string, req UpdateProductRequest) (*Product, error)

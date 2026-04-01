@@ -17,12 +17,12 @@ func NewService(repo Repository) Service {
 
 // --- Categories ---
 
-func (s *catalogService) ListCategories(ctx context.Context, filter CategoryFilter) ([]Category, error) {
-	cats, err := s.repo.ListCategories(ctx, filter)
+func (s *catalogService) ListCategories(ctx context.Context, filter CategoryFilter) ([]Category, int, error) {
+	cats, total, err := s.repo.ListCategories(ctx, filter)
 	if err != nil {
-		return nil, apperror.NewInternal("failed to fetch categories", err)
+		return nil, 0, apperror.NewInternal("failed to fetch categories", err)
 	}
-	return cats, nil
+	return cats, total, nil
 }
 
 func (s *catalogService) GetCategoryBySlug(ctx context.Context, slug string) (*Category, error) {
@@ -67,12 +67,12 @@ func (s *catalogService) DeleteCategory(ctx context.Context, slug string) error 
 
 // --- Products ---
 
-func (s *catalogService) ListProducts(ctx context.Context, filter ProductFilter) ([]Product, error) {
-	products, err := s.repo.ListProducts(ctx, filter)
+func (s *catalogService) ListProducts(ctx context.Context, filter ProductFilter) ([]Product, int, error) {
+	products, total, err := s.repo.ListProducts(ctx, filter)
 	if err != nil {
-		return nil, apperror.NewInternal("failed to fetch products", err)
+		return nil, 0, apperror.NewInternal("failed to fetch products", err)
 	}
-	return products, nil
+	return products, total, nil
 }
 
 func (s *catalogService) GetProductBySlug(ctx context.Context, slug string) (*Product, error) {

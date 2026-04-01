@@ -1,18 +1,22 @@
 package catalog
 
-import "context"
+import (
+	"context"
+
+	"github.com/dimon2255/agentic-ecommerce/api/internal/pagination"
+)
 
 // Repository defines data access operations for the catalog domain.
 type Repository interface {
 	// Categories
-	ListCategories(ctx context.Context, filter CategoryFilter) ([]Category, error)
+	ListCategories(ctx context.Context, filter CategoryFilter) ([]Category, int, error)
 	GetCategoryBySlug(ctx context.Context, slug string) (*Category, error)
 	CreateCategory(ctx context.Context, data CreateCategoryRequest) (*Category, error)
 	UpdateCategory(ctx context.Context, slug string, data UpdateCategoryRequest) (*Category, error)
 	DeleteCategory(ctx context.Context, slug string) error
 
 	// Products
-	ListProducts(ctx context.Context, filter ProductFilter) ([]Product, error)
+	ListProducts(ctx context.Context, filter ProductFilter) ([]Product, int, error)
 	GetProductBySlug(ctx context.Context, slug string) (*Product, error)
 	CreateProduct(ctx context.Context, data CreateProductRequest) (*Product, error)
 	UpdateProduct(ctx context.Context, slug string, data UpdateProductRequest) (*Product, error)
@@ -42,9 +46,15 @@ type Repository interface {
 // CategoryFilter controls category list queries.
 type CategoryFilter struct {
 	ParentID *string // filter by parent_id; "null" for root categories
+	pagination.Params
 }
 
 // ProductFilter controls product list queries.
 type ProductFilter struct {
-	CategoryID *string
+	CategoryID  *string
+	Search      string
+	SortBy      string
+	SortDir     string
+	CategoryIDs []string // for multi-category queries (frontend N+1 fix)
+	pagination.Params
 }

@@ -26,6 +26,7 @@ func setupTestCategoryHandler(supabaseHandler http.HandlerFunc) (*CategoryHandle
 func TestListCategories(t *testing.T) {
 	handler, server := setupTestCategoryHandler(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Content-Range", "0-1/2")
 		json.NewEncoder(w).Encode([]Category{
 			{ID: "1", Name: "Electronics", Slug: "electronics"},
 			{ID: "2", Name: "Clothing", Slug: "clothing"},
@@ -42,10 +43,13 @@ func TestListCategories(t *testing.T) {
 		t.Fatalf("expected 200, got %d", w.Code)
 	}
 
-	var result []Category
+	var result struct {
+		Items []Category `json:"items"`
+		Total int        `json:"total"`
+	}
 	json.NewDecoder(w.Body).Decode(&result)
-	if len(result) != 2 {
-		t.Fatalf("expected 2 categories, got %d", len(result))
+	if len(result.Items) != 2 {
+		t.Fatalf("expected 2 categories, got %d", len(result.Items))
 	}
 }
 

@@ -26,6 +26,7 @@ func setupTestProductHandler(supabaseHandler http.HandlerFunc) (*ProductHandler,
 func TestListProducts(t *testing.T) {
 	handler, server := setupTestProductHandler(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Content-Range", "0-0/1")
 		json.NewEncoder(w).Encode([]Product{
 			{ID: "1", Name: "T-Shirt", Slug: "t-shirt", BasePrice: 29.99, Status: "active"},
 		})
@@ -41,10 +42,13 @@ func TestListProducts(t *testing.T) {
 		t.Fatalf("expected 200, got %d", w.Code)
 	}
 
-	var result []Product
+	var result struct {
+		Items []Product `json:"items"`
+		Total int       `json:"total"`
+	}
 	json.NewDecoder(w.Body).Decode(&result)
-	if len(result) != 1 {
-		t.Fatalf("expected 1 product, got %d", len(result))
+	if len(result.Items) != 1 {
+		t.Fatalf("expected 1 product, got %d", len(result.Items))
 	}
 }
 
