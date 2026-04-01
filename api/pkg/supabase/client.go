@@ -5,9 +5,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -68,7 +70,9 @@ func (q *QueryBuilder) In(column string, values []string) *QueryBuilder {
 		if i > 0 {
 			joined += ","
 		}
-		joined += `"` + v + `"`
+		// Escape double quotes to prevent injection
+		escaped := strings.ReplaceAll(v, `"`, `\"`)
+		joined += `"` + escaped + `"`
 	}
 	q.params.Set(column, "in.("+joined+")")
 	return q
@@ -172,7 +176,8 @@ func (q *QueryBuilder) Execute(result any) error {
 	}
 
 	if resp.StatusCode >= 400 {
-		return fmt.Errorf("supabase error (status %d): %s", resp.StatusCode, string(respBody))
+		log.Printf("supabase error (status %d): %s", resp.StatusCode, string(respBody))
+		return fmt.Errorf("supabase request failed (status %d)", resp.StatusCode)
 	}
 
 	if result != nil && len(respBody) > 0 {

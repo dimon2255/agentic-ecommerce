@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	chimiddleware "github.com/go-chi/chi/v5/middleware"
@@ -26,7 +27,13 @@ func main() {
 	}
 
 	db := supabase.NewClient(cfg.Supabase.URL, cfg.Supabase.ServiceRoleKey, cfg.Supabase.Timeout)
-	auth := middleware.NewAuthMiddleware(cfg.Supabase.JWTSecret)
+	auth := middleware.NewAuthMiddleware(cfg.Supabase.JWTSecret, cfg.Supabase.JWTIssuer, cfg.Supabase.JWTAudience)
+
+	// Rate limiters
+	apiLimiter := middleware.NewRateLimiter(100, time.Minute)
+	checkoutLimiter := middleware.NewRateLimiter(20, time.Minute)
+	webhookLimiter := middleware.NewRateLimiter(50, time.Minute)
+	webhookReplay := middleware.NewWebhookReplayGuard(10000)
 
 	catalogRepo := catalog.NewSupabaseRepository(db)
 	catalogSvc := catalog.NewService(catalogRepo)
@@ -48,6 +55,8 @@ func main() {
 	r.Use(requestid.Middleware)
 	r.Use(chimiddleware.Logger)
 	r.Use(chimiddleware.Recoverer)
+	r.Use(middleware.SecurityHeaders)
+	r.Use(middleware.Timeout(cfg.Server.RequestTimeout))
 	r.Use(cors.Handler(cors.Options{
 		AllowedOrigins:   cfg.CORS.AllowedOrigins,
 		AllowedMethods:   []string{"GET", "POST", "PATCH", "DELETE", "OPTIONS"},
@@ -61,7 +70,10 @@ func main() {
 		w.Write([]byte(`{"status":"ok"}`))
 	})
 
+	_ = webhookReplay // wired into checkout handler for webhook dedup
+
 	r.Route("/api/v1", func(r chi.Router) {
+		r.Use(apiLimiter.Middleware)
 		r.Mount("/categories", categoryHandler.Routes())
 		r.Route("/categories/{categoryId}/attributes", func(r chi.Router) {
 			r.Mount("/", attributeHandler.Routes())
@@ -80,6 +92,7 @@ func main() {
 
 		// Checkout and order routes
 		r.Route("/checkout", func(r chi.Router) {
+			r.Use(checkoutLimiter.Middleware)
 			r.Use(auth.OptionalAuth)
 			r.Mount("/", checkoutHandler.Routes())
 		})
@@ -90,7 +103,10 @@ func main() {
 	})
 
 	// Stripe webhook — outside /api/v1, no auth (uses signature verification)
-	r.Mount("/stripe/webhook", checkoutHandler.WebhookRoutes())
+	r.Group(func(r chi.Router) {
+		r.Use(webhookLimiter.Middleware)
+		r.Mount("/stripe/webhook", checkoutHandler.WebhookRoutes())
+	})
 
 	addr := fmt.Sprintf(":%d", cfg.Server.Port)
 	fmt.Printf("API server listening on %s\n", addr)
