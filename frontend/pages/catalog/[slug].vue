@@ -27,7 +27,10 @@
         </div>
       </div>
 
-      <div v-if="products?.length" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
+      <div v-if="productsLoading" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
+        <SkeletonCard v-for="n in 8" :key="n" />
+      </div>
+      <div v-else-if="products?.length" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
         <div
           v-for="(product, i) in products"
           :key="product.id"

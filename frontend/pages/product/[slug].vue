@@ -102,6 +102,7 @@ function onSkuSelect(sku: any) {
 }
 
 const { addItem } = useCart()
+const { showToast } = useToast()
 const addingToCart = ref(false)
 const addedMsg = ref('')
 
@@ -112,9 +113,11 @@ async function addToCart() {
   try {
     await addItem(selectedSku.value.id)
     addedMsg.value = 'Added to cart!'
+    showToast('Added to cart!', 'success')
     setTimeout(() => { addedMsg.value = '' }, 2000)
   } catch {
     addedMsg.value = 'Failed to add to cart'
+    showToast('Failed to add to cart', 'error')
   } finally {
     addingToCart.value = false
   }
