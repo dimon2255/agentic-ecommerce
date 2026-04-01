@@ -1,6 +1,10 @@
 package checkout
 
-import "time"
+import (
+	"time"
+
+	"github.com/dimon2255/agentic-ecommerce/api/internal/validate"
+)
 
 // Database models
 
@@ -42,6 +46,19 @@ type ShippingAddress struct {
 type StartCheckoutRequest struct {
 	Email           string          `json:"email"`
 	ShippingAddress ShippingAddress `json:"shipping_address"`
+}
+
+func (r *StartCheckoutRequest) Validate() error {
+	v := validate.New()
+	v.Required("email", r.Email)
+	v.Email("email", r.Email)
+	v.Required("shipping_address.name", r.ShippingAddress.Name)
+	v.Required("shipping_address.line1", r.ShippingAddress.Line1)
+	v.Required("shipping_address.city", r.ShippingAddress.City)
+	v.Required("shipping_address.zip", r.ShippingAddress.Zip)
+	v.Required("shipping_address.country", r.ShippingAddress.Country)
+	v.MaxLength("shipping_address.country", r.ShippingAddress.Country, 2)
+	return v.Validate()
 }
 
 type StartCheckoutResponse struct {

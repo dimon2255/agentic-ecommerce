@@ -1,6 +1,6 @@
 # Plan 5: Architecture Overhaul — Progress
 
-## Status: Not Started
+## Status: In Progress
 
 > Full audit of system design, backend architecture, and frontend UI/UX. 6 phases, 15 PRs, ~50 files.
 > See `.claude/plans/jazzy-watching-yeti.md` for the detailed plan file.
@@ -26,8 +26,8 @@ All 6 phases complete --> Plan 4: Admin Dashboard
 
 | Phase | PR | Status | Branch | Date | Notes |
 |-------|----|--------|--------|------|-------|
-| **1** | **1A:** Error Types + Response Envelope + Request ID | Not Started | | | `apperror`, `request_id` middleware, restructure `response/json.go` |
-| **1** | **1B:** Input Validation Framework | Not Started | | | `validate` package, `Validate()` on all request structs |
+| **1** | **1A:** Error Types + Response Envelope + Request ID | Done | feat/plan-5-phase-1-infrastructure | 2026-03-31 | PR #5. `apperror`, `requestid` (own package to avoid import cycle), `response/json.go` |
+| **1** | **1B:** Input Validation Framework | Done | feat/plan-5-phase-1-infrastructure | 2026-03-31 | PR #5. `validate` package, `Validate()` on 11 request structs |
 | **2** | **2A:** Catalog Service + Repository | Not Started | | | Extract catalog handlers → service + repo. **Fixes N+1** in SKUs and attributes |
 | **2** | **2B:** Cart Service + Repository | Not Started | | | Extract cart handler → service + repo |
 | **2** | **2C:** Checkout Service + Repository | Not Started | | | Extract checkout handler → service + repo |
