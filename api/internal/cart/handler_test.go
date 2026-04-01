@@ -18,7 +18,9 @@ import (
 func setupTestCartHandler(supabaseHandler http.HandlerFunc) (*CartHandler, *httptest.Server) {
 	server := httptest.NewServer(supabaseHandler)
 	client := supa.NewClient(server.URL, "test-key", 10*time.Second)
-	handler := NewCartHandler(client)
+	repo := NewSupabaseRepository(client)
+	svc := NewService(repo)
+	handler := NewCartHandler(svc)
 	return handler, server
 }
 
@@ -120,8 +122,8 @@ func TestGetCart_RequiresSessionOrAuth(t *testing.T) {
 
 	handler.GetCart(w, req)
 
-	if w.Code != http.StatusBadRequest {
-		t.Fatalf("expected 400, got %d", w.Code)
+	if w.Code != http.StatusUnauthorized {
+		t.Fatalf("expected 401, got %d", w.Code)
 	}
 }
 
@@ -170,7 +172,7 @@ func TestAddItem_CreatesCartAndAddsItem(t *testing.T) {
 	})
 	defer server.Close()
 
-	body := `{"sku_id":"sku-1","quantity":1}`
+	body := `{"sku_id":"550e8400-e29b-41d4-a716-446655440000","quantity":1}`
 	req := httptest.NewRequest("POST", "/cart/items", strings.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-Session-ID", "session-abc")

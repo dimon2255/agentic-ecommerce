@@ -35,9 +35,13 @@ func main() {
 	productHandler := catalog.NewProductHandler(catalogSvc)
 	skuHandler := catalog.NewSKUHandler(catalogSvc)
 	customFieldHandler := catalog.NewCustomFieldHandler(catalogSvc)
-	cartHandler := cart.NewCartHandler(db)
+	cartRepo := cart.NewSupabaseRepository(db)
+	cartSvc := cart.NewService(cartRepo)
+	cartHandler := cart.NewCartHandler(cartSvc)
 	stripePayments := stripeClient.NewClient(cfg.Stripe.SecretKey, cfg.Stripe.WebhookSecret)
-	checkoutHandler := checkout.NewCheckoutHandler(db, stripePayments, cfg.Checkout.PaymentCurrency, cfg.Checkout.WebhookMaxBodySize)
+	checkoutRepo := checkout.NewSupabaseRepository(db)
+	checkoutSvc := checkout.NewService(checkoutRepo, stripePayments, cfg.Checkout.PaymentCurrency)
+	checkoutHandler := checkout.NewCheckoutHandler(checkoutSvc, stripePayments, cfg.Checkout.WebhookMaxBodySize)
 
 	r := chi.NewRouter()
 
