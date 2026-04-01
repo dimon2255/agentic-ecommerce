@@ -14,6 +14,7 @@ import (
 	"github.com/dimon2255/agentic-ecommerce/api/internal/checkout"
 	"github.com/dimon2255/agentic-ecommerce/api/internal/config"
 	"github.com/dimon2255/agentic-ecommerce/api/internal/middleware"
+	"github.com/dimon2255/agentic-ecommerce/api/internal/requestid"
 	stripeClient "github.com/dimon2255/agentic-ecommerce/api/pkg/stripe"
 	"github.com/dimon2255/agentic-ecommerce/api/pkg/supabase"
 )
@@ -38,6 +39,7 @@ func main() {
 
 	r := chi.NewRouter()
 
+	r.Use(requestid.Middleware)
 	r.Use(chimiddleware.Logger)
 	r.Use(chimiddleware.Recoverer)
 	r.Use(cors.Handler(cors.Options{
