@@ -6,6 +6,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	"github.com/dimon2255/agentic-ecommerce/api/internal/pagination"
 	"github.com/dimon2255/agentic-ecommerce/api/pkg/response"
 )
 
@@ -28,17 +29,17 @@ func (h *CategoryHandler) Routes() chi.Router {
 }
 
 func (h *CategoryHandler) List(w http.ResponseWriter, r *http.Request) {
-	filter := CategoryFilter{}
+	filter := CategoryFilter{Params: pagination.ParseFromQuery(r)}
 	if parentID := r.URL.Query().Get("parent_id"); parentID != "" {
 		filter.ParentID = &parentID
 	}
 
-	categories, err := h.svc.ListCategories(r.Context(), filter)
+	categories, total, err := h.svc.ListCategories(r.Context(), filter)
 	if err != nil {
 		response.ErrorFromAppError(w, r, err)
 		return
 	}
-	response.JSON(w, http.StatusOK, categories)
+	response.JSON(w, http.StatusOK, pagination.NewResponse(categories, total, filter.Params))
 }
 
 func (h *CategoryHandler) GetBySlug(w http.ResponseWriter, r *http.Request) {

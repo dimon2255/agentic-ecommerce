@@ -3,9 +3,11 @@ package catalog
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 
+	"github.com/dimon2255/agentic-ecommerce/api/internal/pagination"
 	"github.com/dimon2255/agentic-ecommerce/api/pkg/response"
 )
 
@@ -28,17 +30,23 @@ func (h *ProductHandler) Routes() chi.Router {
 }
 
 func (h *ProductHandler) List(w http.ResponseWriter, r *http.Request) {
-	filter := ProductFilter{}
+	filter := ProductFilter{Params: pagination.ParseFromQuery(r)}
 	if categoryID := r.URL.Query().Get("category_id"); categoryID != "" {
 		filter.CategoryID = &categoryID
 	}
+	if categoryIDs := r.URL.Query().Get("category_ids"); categoryIDs != "" {
+		filter.CategoryIDs = strings.Split(categoryIDs, ",")
+	}
+	filter.Search = r.URL.Query().Get("search")
+	filter.SortBy = r.URL.Query().Get("sort_by")
+	filter.SortDir = r.URL.Query().Get("sort_dir")
 
-	products, err := h.svc.ListProducts(r.Context(), filter)
+	products, total, err := h.svc.ListProducts(r.Context(), filter)
 	if err != nil {
 		response.ErrorFromAppError(w, r, err)
 		return
 	}
-	response.JSON(w, http.StatusOK, products)
+	response.JSON(w, http.StatusOK, pagination.NewResponse(products, total, filter.Params))
 }
 
 func (h *ProductHandler) GetBySlug(w http.ResponseWriter, r *http.Request) {

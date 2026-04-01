@@ -31,9 +31,9 @@ All 6 phases complete --> Plan 4: Admin Dashboard
 | **2** | **2A:** Catalog Service + Repository | Done | feat/plan-5-phase-2-service-layer | 2026-03-31 | N+1 fixed via embedded selects. 5 handlers refactored |
 | **2** | **2B:** Cart Service + Repository | Done | feat/plan-5-phase-2-service-layer | 2026-03-31 | Handler 418→90 lines. Auth error now 401 |
 | **2** | **2C:** Checkout Service + Repository | Done | feat/plan-5-phase-2-service-layer | 2026-03-31 | Handler 275→100 lines. Price conflict now structured |
-| **3** | **3A:** Indexes, Constraints, Soft Deletes | Not Started | | | Migration `00005`: composite indexes, active cart uniqueness, order soft delete |
-| **3** | **3B:** Atomic Operations via RPC | Not Started | | | Migration `00006`: `add_or_increment_cart_item`, `create_order_atomic`, idempotency key |
-| **3** | **3C:** Pagination + Search + Filtering | Not Started | | | Migration `00007`: FTS index + search RPC. `pagination` package. All list endpoints paginated |
+| **3** | **3A:** Indexes, Constraints, Soft Deletes | Done | feat/plan-5-phase-3-db-performance | 2026-03-31 | Migration 00005. Composite indexes, active cart uniqueness, order soft delete, shipping CHECK |
+| **3** | **3B:** Atomic Operations via RPC | Done | feat/plan-5-phase-3-db-performance | 2026-03-31 | Migration 00006. Cart upsert RPC, atomic order creation, idempotency key |
+| **3** | **3C:** Pagination + Search + Filtering | Done | feat/plan-5-phase-3-db-performance | 2026-03-31 | Migration 00007. FTS, pagination pkg, Supabase Ilike/Fts/CountExact, multi-category filter |
 | **4** | **4A:** JWT + Security Headers + Stripe Fixes | Not Started | | | `iss`/`aud` validation, security headers, webhook replay, fix `In()` quoting |
 | **4** | **4B:** Rate Limiting + Request Timeout | Not Started | | | Token bucket per IP, request timeout, context-aware Supabase client |
 | **5** | **5A:** Accessibility (WCAG 2.1 AA) | Not Started | | | Skip-to-content, form labels, aria-labels, focus-visible, semantic breadcrumbs |

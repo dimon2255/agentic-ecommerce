@@ -17,8 +17,8 @@ func NewSupabaseRepository(db *supabase.Client) Repository {
 
 // --- Categories ---
 
-func (r *supabaseRepository) ListCategories(_ context.Context, filter CategoryFilter) ([]Category, error) {
-	query := r.db.From("categories").Select("*").Order("name", "asc")
+func (r *supabaseRepository) ListCategories(_ context.Context, filter CategoryFilter) ([]Category, int, error) {
+	query := r.db.From("categories").Select("*").Order("name", "asc").CountExact()
 	if filter.ParentID != nil {
 		if *filter.ParentID == "null" {
 			query = query.Is("parent_id", "null")
@@ -26,14 +26,18 @@ func (r *supabaseRepository) ListCategories(_ context.Context, filter CategoryFi
 			query = query.Eq("parent_id", *filter.ParentID)
 		}
 	}
+	if filter.PerPage > 0 {
+		query = query.Limit(filter.PerPage).Offset(filter.Offset())
+	}
 	var categories []Category
-	if err := query.Execute(&categories); err != nil {
-		return nil, err
+	total, err := query.ExecuteWithCount(&categories)
+	if err != nil {
+		return nil, 0, err
 	}
 	if categories == nil {
 		categories = []Category{}
 	}
-	return categories, nil
+	return categories, total, nil
 }
 
 func (r *supabaseRepository) GetCategoryBySlug(_ context.Context, slug string) (*Category, error) {
@@ -70,19 +74,48 @@ func (r *supabaseRepository) DeleteCategory(_ context.Context, slug string) erro
 
 // --- Products ---
 
-func (r *supabaseRepository) ListProducts(_ context.Context, filter ProductFilter) ([]Product, error) {
-	query := r.db.From("products").Select("*").Order("created_at", "desc")
+func (r *supabaseRepository) ListProducts(_ context.Context, filter ProductFilter) ([]Product, int, error) {
+	// Determine sort
+	sortBy := "created_at"
+	sortDir := "desc"
+	if filter.SortBy != "" {
+		sortBy = filter.SortBy
+	}
+	if filter.SortDir == "asc" || filter.SortDir == "desc" {
+		sortDir = filter.SortDir
+	}
+
+	query := r.db.From("products").Select("*").Order(sortBy, sortDir).CountExact()
+
+	// Filter by single category
 	if filter.CategoryID != nil {
 		query = query.Eq("category_id", *filter.CategoryID)
 	}
+
+	// Filter by multiple categories (for frontend N+1 fix)
+	if len(filter.CategoryIDs) > 0 {
+		query = query.In("category_id", filter.CategoryIDs)
+	}
+
+	// Full-text search
+	if filter.Search != "" {
+		query = query.Fts("search_vector", filter.Search)
+	}
+
+	// Pagination
+	if filter.PerPage > 0 {
+		query = query.Limit(filter.PerPage).Offset(filter.Offset())
+	}
+
 	var products []Product
-	if err := query.Execute(&products); err != nil {
-		return nil, err
+	total, err := query.ExecuteWithCount(&products)
+	if err != nil {
+		return nil, 0, err
 	}
 	if products == nil {
 		products = []Product{}
 	}
-	return products, nil
+	return products, total, nil
 }
 
 func (r *supabaseRepository) GetProductBySlug(_ context.Context, slug string) (*Product, error) {
