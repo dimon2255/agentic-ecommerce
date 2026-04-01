@@ -43,7 +43,7 @@
       </div>
 
       <!-- Price Change Warning -->
-      <div v-if="priceChanges.length" class="bg-amber-900/20 border border-amber-700/30 rounded-xl p-4">
+      <div v-if="priceChanges.length" class="bg-[var(--color-warning-bg)] border border-[var(--color-warning-border)] rounded-xl p-4">
         <p class="font-medium text-amber-300 text-sm">Some prices have been updated:</p>
         <ul class="mt-2 text-sm text-amber-400/80">
           <li v-for="change in priceChanges" :key="change.sku_id">
@@ -98,7 +98,7 @@
             {{ checkoutLoading ? 'Processing...' : 'Continue to Payment' }}
           </button>
 
-          <p v-if="checkoutError" role="alert" class="text-red-400 text-sm text-center">{{ checkoutError }}</p>
+          <p v-if="checkoutError" role="alert" class="text-[var(--color-error)] text-sm text-center">{{ checkoutError }}</p>
         </form>
       </div>
 
@@ -109,7 +109,7 @@
         <button @click="handlePayment" :disabled="paying" class="w-full btn-accent py-3.5 rounded-xl text-sm tracking-wide">
           {{ paying ? 'Processing payment...' : `Pay $${cartTotal.toFixed(2)}` }}
         </button>
-        <p v-if="paymentError" role="alert" class="text-red-400 text-sm text-center mt-3">{{ paymentError }}</p>
+        <p v-if="paymentError" role="alert" class="text-[var(--color-error)] text-sm text-center mt-3">{{ paymentError }}</p>
         <button @click="step = 'shipping'" class="w-full text-sm text-muted hover:text-secondary mt-4 transition-colors">
           Back to shipping
         </button>

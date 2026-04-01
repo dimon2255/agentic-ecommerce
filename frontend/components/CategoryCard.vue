@@ -47,5 +47,5 @@ const labels: Record<string, string> = {
   laptops: 'Portable Computing',
   't-shirts': 'Casual Wear',
 }
-const label = labels[props.category.slug] || 'Browse Collection'
+const label = labels[props.category.slug] || props.category.name
 </script>

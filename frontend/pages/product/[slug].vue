@@ -54,7 +54,7 @@
             v-if="addedMsg"
             role="alert"
             class="mt-3 text-sm text-center font-medium"
-            :class="addedMsg === 'Added to cart!' ? 'text-emerald-400' : 'text-red-400'"
+            :class="addedMsg === 'Added to cart!' ? 'text-[var(--color-success)]' : 'text-[var(--color-error)]'"
           >
             {{ addedMsg }}
           </p>

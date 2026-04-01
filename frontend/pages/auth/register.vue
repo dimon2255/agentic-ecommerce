@@ -7,10 +7,10 @@
       </div>
 
       <div class="card-dark p-6">
-        <div v-if="errorMsg" role="alert" class="mb-4 p-3 bg-red-900/20 border border-red-700/30 rounded-lg text-sm text-red-300">
+        <div v-if="errorMsg" role="alert" class="mb-4 p-3 bg-[var(--color-error-bg)] border border-[var(--color-error-border)] rounded-lg text-sm text-red-300">
           {{ errorMsg }}
         </div>
-        <div v-if="successMsg" role="alert" class="mb-4 p-3 bg-emerald-900/20 border border-emerald-700/30 rounded-lg text-sm text-emerald-300">
+        <div v-if="successMsg" role="alert" class="mb-4 p-3 bg-[var(--color-success-bg)] border border-[var(--color-success-border)] rounded-lg text-sm text-emerald-300">
           {{ successMsg }}
         </div>
 
