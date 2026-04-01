@@ -8,6 +8,7 @@
         v-if="product.images?.length"
         :src="product.images[0]"
         :alt="product.name"
+        loading="lazy"
         class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
       />
       <div v-else class="flex items-center justify-center w-full h-full">

@@ -20,6 +20,7 @@
             v-if="product.images?.length"
             :src="product.images[0]"
             :alt="product.name"
+            loading="lazy"
             class="w-full h-full object-cover"
           />
           <div v-else class="w-full h-full flex items-center justify-center">
