@@ -193,3 +193,10 @@ input, select, textarea {
   font-weight: 700;
   box-shadow: 0 0 8px rgba(232, 168, 56, 0.4);
 }
+
+/* ---------- Focus-visible ---------- */
+
+*:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}

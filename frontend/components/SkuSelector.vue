@@ -2,9 +2,12 @@
   <div class="space-y-5">
     <div v-for="attr in attributes" :key="attr.id">
       <label class="block text-sm font-medium text-secondary mb-2">{{ attr.name }}</label>
-      <div class="flex flex-wrap gap-2">
+      <div role="radiogroup" :aria-label="attr.name" class="flex flex-wrap gap-2">
         <button
           v-for="option in attr.options" :key="option"
+          role="radio"
+          :aria-checked="selectedValues[attr.name] === option"
+          :aria-disabled="!isOptionAvailable(attr.name, option)"
           :class="[
             'px-4 py-2 rounded-lg text-sm font-medium border transition-all duration-200',
             selectedValues[attr.name] === option
