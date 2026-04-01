@@ -2,18 +2,6 @@
 
 Single-tenant e-commerce platform with a flexible, category-driven product catalog, SKU variant support, server-side shopping cart, and Stripe-powered checkout with 3D Secure.
 
-## Screenshots
-
-<p align="center">
-  <img src="docs/screenshots/homepage.png" alt="Homepage" width="100%">
-</p>
-<p align="center"><em>Homepage — dark hero with gradient mesh and category cards</em></p>
-
-<p align="center">
-  <img src="docs/screenshots/product-detail.png" alt="Product Detail" width="100%">
-</p>
-<p align="center"><em>Product detail — SKU variant selector with amber accents</em></p>
-
 ## Architecture
 
 ```mermaid
