@@ -5,6 +5,7 @@
         v-if="item.skus.products.images?.length"
         :src="item.skus.products.images[0]"
         :alt="item.skus.products.name"
+        loading="lazy"
         class="w-full h-full object-cover"
       />
     </div>

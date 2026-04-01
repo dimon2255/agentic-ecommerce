@@ -22,7 +22,7 @@
           v-for="item in cart.items"
           :key="item.id"
           :item="item"
-          :updating="updating"
+          :updating="updatingItems.has(item.id)"
           @update="handleUpdate"
           @remove="handleRemove"
         />
@@ -46,27 +46,34 @@
 
 <script setup lang="ts">
 const { cart, loading, total, refresh, updateItem, removeItem } = useCart()
-const updating = ref(false)
+const updatingItems = ref(new Set<string>())
 
 onMounted(() => {
-  refresh()
+  refresh(true)
 })
 
 async function handleUpdate(itemId: string, quantity: number) {
-  updating.value = true
+  updatingItems.value.add(itemId)
+  // Optimistic update
+  const item = cart.value?.items.find(i => i.id === itemId)
+  const prevQty = item?.quantity
+  if (item) item.quantity = quantity
   try {
     await updateItem(itemId, quantity)
+  } catch {
+    // Revert on failure
+    if (item && prevQty !== undefined) item.quantity = prevQty
   } finally {
-    updating.value = false
+    updatingItems.value.delete(itemId)
   }
 }
 
 async function handleRemove(itemId: string) {
-  updating.value = true
+  updatingItems.value.add(itemId)
   try {
     await removeItem(itemId)
   } finally {
-    updating.value = false
+    updatingItems.value.delete(itemId)
   }
 }
 </script>

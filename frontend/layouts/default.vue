@@ -59,6 +59,7 @@
     <main id="main-content" class="pt-16 flex-1">
       <slot />
     </main>
+    <Toast />
     <footer class="border-t border-[var(--border-default)]">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex items-center justify-between">
         <p class="text-sm text-muted">
