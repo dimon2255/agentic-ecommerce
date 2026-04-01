@@ -52,23 +52,9 @@ func (s *cartService) AddItem(ctx context.Context, userID, sessionID string, req
 		return nil, apperror.NewInvalidInput("invalid SKU", nil)
 	}
 
-	// Check for existing item with same SKU
-	existing, err := s.repo.FindCartItem(ctx, cart.ID, req.SKUID)
-	if err != nil {
-		return nil, apperror.NewInternal("failed to check existing items", err)
-	}
-
-	if existing != nil {
-		// Increment quantity
-		newQty := existing.Quantity + req.Quantity
-		if err := s.repo.UpdateCartItemQuantity(ctx, existing.ID, newQty); err != nil {
-			return nil, apperror.NewInternal("failed to update item quantity", err)
-		}
-	} else {
-		// Insert new item
-		if err := s.repo.InsertCartItem(ctx, cart.ID, req.SKUID, req.Quantity, unitPrice); err != nil {
-			return nil, apperror.NewInternal("failed to add item to cart", err)
-		}
+	// Atomic upsert via RPC — inserts or increments quantity in a single DB call
+	if err := s.repo.InsertCartItem(ctx, cart.ID, req.SKUID, req.Quantity, unitPrice); err != nil {
+		return nil, apperror.NewInternal("failed to add item to cart", err)
 	}
 
 	resp, err := s.repo.GetCartWithItems(ctx, cart.ID)

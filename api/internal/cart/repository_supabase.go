@@ -104,17 +104,13 @@ func (r *supabaseRepository) FindCartItem(_ context.Context, cartID, skuID strin
 }
 
 func (r *supabaseRepository) InsertCartItem(_ context.Context, cartID, skuID string, quantity int, unitPrice float64) error {
-	var inserted []CartItem
-	err := r.db.From("cart_items").Insert(map[string]any{
-		"cart_id":    cartID,
-		"sku_id":     skuID,
-		"quantity":   quantity,
-		"unit_price": unitPrice,
-	}).Execute(&inserted)
-	if err != nil {
-		return fmt.Errorf("insert cart item: %w", err)
-	}
-	return nil
+	// Uses RPC for atomic upsert — eliminates race condition between check-and-insert
+	return r.db.RPC("add_or_increment_cart_item", map[string]any{
+		"p_cart_id":    cartID,
+		"p_sku_id":     skuID,
+		"p_quantity":   quantity,
+		"p_unit_price": unitPrice,
+	}, nil)
 }
 
 func (r *supabaseRepository) UpdateCartItemQuantity(_ context.Context, itemID string, quantity int) error {
