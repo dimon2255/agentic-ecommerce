@@ -7,15 +7,14 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/dimon2255/agentic-ecommerce/api/pkg/response"
-	"github.com/dimon2255/agentic-ecommerce/api/pkg/supabase"
 )
 
 type CustomFieldHandler struct {
-	db *supabase.Client
+	svc Service
 }
 
-func NewCustomFieldHandler(db *supabase.Client) *CustomFieldHandler {
-	return &CustomFieldHandler{db: db}
+func NewCustomFieldHandler(svc Service) *CustomFieldHandler {
+	return &CustomFieldHandler{svc: svc}
 }
 
 func (h *CustomFieldHandler) Routes() chi.Router {
@@ -35,19 +34,10 @@ func (h *CustomFieldHandler) List(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var fields []CustomField
-	err := h.db.From("custom_fields").
-		Select("*").
-		Eq("entity_type", entityType).
-		Eq("entity_id", entityID).
-		Execute(&fields)
+	fields, err := h.svc.ListCustomFields(r.Context(), entityType, entityID)
 	if err != nil {
-		response.Error(w, http.StatusInternalServerError, "failed to fetch custom fields")
+		response.ErrorFromAppError(w, r, err)
 		return
-	}
-
-	if fields == nil {
-		fields = []CustomField{}
 	}
 	response.JSON(w, http.StatusOK, fields)
 }
@@ -67,35 +57,18 @@ func (h *CustomFieldHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if req.Key == "" || req.Value == "" {
-		response.Error(w, http.StatusBadRequest, "key and value are required")
+	field, err := h.svc.CreateCustomField(r.Context(), entityType, entityID, req)
+	if err != nil {
+		response.ErrorFromAppError(w, r, err)
 		return
 	}
-
-	insertData := map[string]any{
-		"entity_type": entityType,
-		"entity_id":   entityID,
-		"key":         req.Key,
-		"value":       req.Value,
-	}
-
-	var created []CustomField
-	if err := h.db.From("custom_fields").Insert(insertData).Execute(&created); err != nil {
-		response.Error(w, http.StatusInternalServerError, "failed to create custom field")
-		return
-	}
-
-	response.JSON(w, http.StatusCreated, created[0])
+	response.JSON(w, http.StatusCreated, field)
 }
 
 func (h *CustomFieldHandler) Delete(w http.ResponseWriter, r *http.Request) {
-	fieldID := chi.URLParam(r, "fieldId")
-
-	err := h.db.From("custom_fields").Eq("id", fieldID).Delete().Execute(nil)
-	if err != nil {
-		response.Error(w, http.StatusInternalServerError, "failed to delete custom field")
+	if err := h.svc.DeleteCustomField(r.Context(), chi.URLParam(r, "fieldId")); err != nil {
+		response.ErrorFromAppError(w, r, err)
 		return
 	}
-
 	w.WriteHeader(http.StatusNoContent)
 }

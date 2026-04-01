@@ -14,7 +14,9 @@ import (
 func setupTestCustomFieldHandler(supabaseHandler http.HandlerFunc) (*CustomFieldHandler, *httptest.Server) {
 	server := httptest.NewServer(supabaseHandler)
 	client := supa.NewClient(server.URL, "test-key", 10*time.Second)
-	handler := NewCustomFieldHandler(client)
+	repo := NewSupabaseRepository(client)
+	svc := NewService(repo)
+	handler := NewCustomFieldHandler(svc)
 	return handler, server
 }
 

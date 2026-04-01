@@ -17,7 +17,9 @@ import (
 func setupTestCategoryHandler(supabaseHandler http.HandlerFunc) (*CategoryHandler, *httptest.Server) {
 	server := httptest.NewServer(supabaseHandler)
 	client := supa.NewClient(server.URL, "test-key", 10*time.Second)
-	handler := NewCategoryHandler(client)
+	repo := NewSupabaseRepository(client)
+	svc := NewService(repo)
+	handler := NewCategoryHandler(svc)
 	return handler, server
 }
 

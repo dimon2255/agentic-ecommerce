@@ -17,26 +17,24 @@ import (
 func setupTestSKUHandler(supabaseHandler http.HandlerFunc) (*SKUHandler, *httptest.Server) {
 	server := httptest.NewServer(supabaseHandler)
 	client := supa.NewClient(server.URL, "test-key", 10*time.Second)
-	handler := NewSKUHandler(client)
+	repo := NewSupabaseRepository(client)
+	svc := NewService(repo)
+	handler := NewSKUHandler(svc)
 	return handler, server
 }
 
 func TestListSKUs(t *testing.T) {
-	callCount := 0
 	handler, server := setupTestSKUHandler(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		callCount++
-		if callCount == 1 {
-			// First call: list SKUs
-			json.NewEncoder(w).Encode([]SKU{
-				{ID: "sku-1", ProductID: "prod-1", SKUCode: "TSHIRT-BLU-M", Status: "active"},
-			})
-		} else {
-			// Second call: fetch attribute values
-			json.NewEncoder(w).Encode([]SKUAttributeValue{
-				{ID: "av-1", SKUID: "sku-1", CategoryAttributeID: "attr-1", Value: "Blue"},
-			})
-		}
+		// Single query with embedded select: *,sku_attribute_values(*)
+		json.NewEncoder(w).Encode([]skuRow{
+			{
+				ID: "sku-1", ProductID: "prod-1", SKUCode: "TSHIRT-BLU-M", Status: "active",
+				RawAttrValues: []SKUAttributeValue{
+					{ID: "av-1", SKUID: "sku-1", CategoryAttributeID: "attr-1", Value: "Blue"},
+				},
+			},
+		})
 	})
 	defer server.Close()
 
