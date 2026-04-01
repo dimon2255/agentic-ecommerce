@@ -7,15 +7,14 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/dimon2255/agentic-ecommerce/api/pkg/response"
-	"github.com/dimon2255/agentic-ecommerce/api/pkg/supabase"
 )
 
 type CategoryHandler struct {
-	db *supabase.Client
+	svc Service
 }
 
-func NewCategoryHandler(db *supabase.Client) *CategoryHandler {
-	return &CategoryHandler{db: db}
+func NewCategoryHandler(svc Service) *CategoryHandler {
+	return &CategoryHandler{svc: svc}
 }
 
 func (h *CategoryHandler) Routes() chi.Router {
@@ -29,38 +28,26 @@ func (h *CategoryHandler) Routes() chi.Router {
 }
 
 func (h *CategoryHandler) List(w http.ResponseWriter, r *http.Request) {
-	parentID := r.URL.Query().Get("parent_id")
-
-	query := h.db.From("categories").Select("*").Order("name", "asc")
-	if parentID == "null" {
-		query = query.Is("parent_id", "null")
-	} else if parentID != "" {
-		query = query.Eq("parent_id", parentID)
+	filter := CategoryFilter{}
+	if parentID := r.URL.Query().Get("parent_id"); parentID != "" {
+		filter.ParentID = &parentID
 	}
 
-	var categories []Category
-	if err := query.Execute(&categories); err != nil {
-		response.Error(w, http.StatusInternalServerError, "failed to fetch categories")
+	categories, err := h.svc.ListCategories(r.Context(), filter)
+	if err != nil {
+		response.ErrorFromAppError(w, r, err)
 		return
-	}
-
-	if categories == nil {
-		categories = []Category{}
 	}
 	response.JSON(w, http.StatusOK, categories)
 }
 
 func (h *CategoryHandler) GetBySlug(w http.ResponseWriter, r *http.Request) {
-	slug := chi.URLParam(r, "slug")
-
-	var category Category
-	err := h.db.From("categories").Select("*").Eq("slug", slug).Single().Execute(&category)
+	cat, err := h.svc.GetCategoryBySlug(r.Context(), chi.URLParam(r, "slug"))
 	if err != nil {
-		response.Error(w, http.StatusNotFound, "category not found")
+		response.ErrorFromAppError(w, r, err)
 		return
 	}
-
-	response.JSON(w, http.StatusOK, category)
+	response.JSON(w, http.StatusOK, cat)
 }
 
 func (h *CategoryHandler) Create(w http.ResponseWriter, r *http.Request) {
@@ -70,52 +57,33 @@ func (h *CategoryHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if req.Name == "" || req.Slug == "" {
-		response.Error(w, http.StatusBadRequest, "name and slug are required")
+	cat, err := h.svc.CreateCategory(r.Context(), req)
+	if err != nil {
+		response.ErrorFromAppError(w, r, err)
 		return
 	}
-
-	var created []Category
-	if err := h.db.From("categories").Insert(req).Execute(&created); err != nil {
-		response.Error(w, http.StatusInternalServerError, "failed to create category")
-		return
-	}
-
-	response.JSON(w, http.StatusCreated, created[0])
+	response.JSON(w, http.StatusCreated, cat)
 }
 
 func (h *CategoryHandler) Update(w http.ResponseWriter, r *http.Request) {
-	slug := chi.URLParam(r, "slug")
-
 	var req UpdateCategoryRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		response.Error(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
-	var updated []Category
-	err := h.db.From("categories").Eq("slug", slug).Update(req).Execute(&updated)
+	cat, err := h.svc.UpdateCategory(r.Context(), chi.URLParam(r, "slug"), req)
 	if err != nil {
-		response.Error(w, http.StatusInternalServerError, "failed to update category")
+		response.ErrorFromAppError(w, r, err)
 		return
 	}
-
-	if len(updated) == 0 {
-		response.Error(w, http.StatusNotFound, "category not found")
-		return
-	}
-
-	response.JSON(w, http.StatusOK, updated[0])
+	response.JSON(w, http.StatusOK, cat)
 }
 
 func (h *CategoryHandler) DeleteBySlug(w http.ResponseWriter, r *http.Request) {
-	slug := chi.URLParam(r, "slug")
-
-	err := h.db.From("categories").Eq("slug", slug).Delete().Execute(nil)
-	if err != nil {
-		response.Error(w, http.StatusInternalServerError, "failed to delete category")
+	if err := h.svc.DeleteCategory(r.Context(), chi.URLParam(r, "slug")); err != nil {
+		response.ErrorFromAppError(w, r, err)
 		return
 	}
-
 	w.WriteHeader(http.StatusNoContent)
 }

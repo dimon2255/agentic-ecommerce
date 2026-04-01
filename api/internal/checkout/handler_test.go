@@ -41,7 +41,9 @@ func newTestHandler(t *testing.T, mux *http.ServeMux) (*CheckoutHandler, *httpte
 		clientSecret:    "pi_test_secret_123",
 		paymentIntentID: "pi_test_id_123",
 	}
-	return NewCheckoutHandler(db, payments, "usd", 65536), server
+	repo := NewSupabaseRepository(db)
+	svc := NewService(repo, payments, "usd")
+	return NewCheckoutHandler(svc, payments, 65536), server
 }
 
 func TestStartCheckout_Success(t *testing.T) {
@@ -179,14 +181,24 @@ func TestStartCheckout_PriceChanged(t *testing.T) {
 
 	var result map[string]any
 	json.NewDecoder(w.Body).Decode(&result)
-	changes, ok := result["price_changes"].([]any)
+	errObj, ok := result["error"].(map[string]any)
+	if !ok {
+		t.Fatal("expected error object in response")
+	}
+	data, ok := errObj["data"].(map[string]any)
+	if !ok {
+		t.Fatal("expected data in error response")
+	}
+	changes, ok := data["price_changes"].([]any)
 	if !ok || len(changes) == 0 {
-		t.Fatal("expected price_changes in response")
+		t.Fatal("expected price_changes in error.data")
 	}
 }
 
 func TestStartCheckout_MissingEmail(t *testing.T) {
-	handler := &CheckoutHandler{}
+	mux := http.NewServeMux()
+	handler, _ := newTestHandler(t, mux)
+
 	body := `{"email":"","shipping_address":{"name":"John","line1":"123 Main","city":"X","zip":"12345","country":"US"}}`
 	req := httptest.NewRequest("POST", "/checkout/start", strings.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
@@ -225,7 +237,9 @@ func TestHandleWebhook_PaymentSucceeded(t *testing.T) {
 		eventType:   "payment_intent.succeeded",
 		webhookPIID: "pi_123",
 	}
-	handler := NewCheckoutHandler(db, payments, "usd", 65536)
+	repo := NewSupabaseRepository(db)
+	svc := NewService(repo, payments, "usd")
+	handler := NewCheckoutHandler(svc, payments, 65536)
 
 	req := httptest.NewRequest("POST", "/stripe/webhook", strings.NewReader(`{}`))
 	req.Header.Set("Stripe-Signature", "valid-sig")
@@ -252,7 +266,9 @@ func TestHandleWebhook_PaymentFailed(t *testing.T) {
 		eventType:   "payment_intent.payment_failed",
 		webhookPIID: "pi_456",
 	}
-	handler := NewCheckoutHandler(db, payments, "usd", 65536)
+	repo := NewSupabaseRepository(db)
+	svc := NewService(repo, payments, "usd")
+	handler := NewCheckoutHandler(svc, payments, 65536)
 
 	req := httptest.NewRequest("POST", "/stripe/webhook", strings.NewReader(`{}`))
 	req.Header.Set("Stripe-Signature", "valid-sig")

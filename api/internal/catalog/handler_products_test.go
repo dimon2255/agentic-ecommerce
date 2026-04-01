@@ -17,7 +17,9 @@ import (
 func setupTestProductHandler(supabaseHandler http.HandlerFunc) (*ProductHandler, *httptest.Server) {
 	server := httptest.NewServer(supabaseHandler)
 	client := supa.NewClient(server.URL, "test-key", 10*time.Second)
-	handler := NewProductHandler(client)
+	repo := NewSupabaseRepository(client)
+	svc := NewService(repo)
+	handler := NewProductHandler(svc)
 	return handler, server
 }
 
@@ -80,7 +82,7 @@ func TestCreateProduct(t *testing.T) {
 	})
 	defer server.Close()
 
-	body := `{"category_id":"cat-1","name":"T-Shirt","slug":"t-shirt","base_price":29.99,"status":"draft"}`
+	body := `{"category_id":"550e8400-e29b-41d4-a716-446655440000","name":"T-Shirt","slug":"t-shirt","base_price":29.99,"status":"draft"}`
 	req := httptest.NewRequest("POST", "/products", strings.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()

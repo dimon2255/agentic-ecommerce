@@ -17,16 +17,19 @@ import (
 func setupTestAttributeHandler(supabaseHandler http.HandlerFunc) (*AttributeHandler, *httptest.Server) {
 	server := httptest.NewServer(supabaseHandler)
 	client := supa.NewClient(server.URL, "test-key", 10*time.Second)
-	handler := NewAttributeHandler(client)
+	repo := NewSupabaseRepository(client)
+	svc := NewService(repo)
+	handler := NewAttributeHandler(svc)
 	return handler, server
 }
 
 func TestListAttributes(t *testing.T) {
 	handler, server := setupTestAttributeHandler(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode([]CategoryAttribute{
-			{ID: "1", CategoryID: "cat-1", Name: "Size", Type: "enum"},
-			{ID: "2", CategoryID: "cat-1", Name: "Color", Type: "enum"},
+		// Embedded select response: *,attribute_options(*)
+		json.NewEncoder(w).Encode([]categoryAttributeRow{
+			{ID: "1", CategoryID: "cat-1", Name: "Size", Type: "enum", RawOptions: []AttributeOption{}},
+			{ID: "2", CategoryID: "cat-1", Name: "Color", Type: "enum", RawOptions: []AttributeOption{}},
 		})
 	})
 	defer server.Close()

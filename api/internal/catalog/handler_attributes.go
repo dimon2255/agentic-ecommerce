@@ -7,15 +7,14 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/dimon2255/agentic-ecommerce/api/pkg/response"
-	"github.com/dimon2255/agentic-ecommerce/api/pkg/supabase"
 )
 
 type AttributeHandler struct {
-	db *supabase.Client
+	svc Service
 }
 
-func NewAttributeHandler(db *supabase.Client) *AttributeHandler {
-	return &AttributeHandler{db: db}
+func NewAttributeHandler(svc Service) *AttributeHandler {
+	return &AttributeHandler{svc: svc}
 }
 
 func (h *AttributeHandler) Routes() chi.Router {
@@ -23,8 +22,6 @@ func (h *AttributeHandler) Routes() chi.Router {
 	r.Get("/", h.List)
 	r.Post("/", h.Create)
 	r.Delete("/{attrId}", h.Delete)
-
-	// Attribute options
 	r.Get("/{attrId}/options", h.ListOptions)
 	r.Post("/{attrId}/options", h.CreateOption)
 	r.Delete("/{attrId}/options/{optionId}", h.DeleteOption)
@@ -32,134 +29,65 @@ func (h *AttributeHandler) Routes() chi.Router {
 }
 
 func (h *AttributeHandler) List(w http.ResponseWriter, r *http.Request) {
-	categoryID := chi.URLParam(r, "categoryId")
-
-	var attrs []CategoryAttribute
-	err := h.db.From("category_attributes").
-		Select("*").
-		Eq("category_id", categoryID).
-		Order("sort_order", "asc").
-		Execute(&attrs)
+	attrs, err := h.svc.ListAttributesWithOptions(r.Context(), chi.URLParam(r, "categoryId"))
 	if err != nil {
-		response.Error(w, http.StatusInternalServerError, "failed to fetch attributes")
+		response.ErrorFromAppError(w, r, err)
 		return
-	}
-
-	// Fetch options for each attribute
-	for i := range attrs {
-		var options []AttributeOption
-		h.db.From("attribute_options").
-			Select("*").
-			Eq("category_attribute_id", attrs[i].ID).
-			Order("sort_order", "asc").
-			Execute(&options)
-		if options == nil {
-			options = []AttributeOption{}
-		}
-		attrs[i].Options = options
-	}
-
-	if attrs == nil {
-		attrs = []CategoryAttribute{}
 	}
 	response.JSON(w, http.StatusOK, attrs)
 }
 
 func (h *AttributeHandler) Create(w http.ResponseWriter, r *http.Request) {
-	categoryID := chi.URLParam(r, "categoryId")
-
 	var req CreateAttributeRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		response.Error(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
-	if req.Name == "" || req.Type == "" {
-		response.Error(w, http.StatusBadRequest, "name and type are required")
+	attr, err := h.svc.CreateAttribute(r.Context(), chi.URLParam(r, "categoryId"), req)
+	if err != nil {
+		response.ErrorFromAppError(w, r, err)
 		return
 	}
-
-	insertData := map[string]any{
-		"category_id": categoryID,
-		"name":        req.Name,
-		"type":        req.Type,
-		"required":    req.Required,
-		"sort_order":  req.SortOrder,
-	}
-
-	var created []CategoryAttribute
-	if err := h.db.From("category_attributes").Insert(insertData).Execute(&created); err != nil {
-		response.Error(w, http.StatusInternalServerError, "failed to create attribute")
-		return
-	}
-
-	response.JSON(w, http.StatusCreated, created[0])
+	response.JSON(w, http.StatusCreated, attr)
 }
 
 func (h *AttributeHandler) Delete(w http.ResponseWriter, r *http.Request) {
-	attrID := chi.URLParam(r, "attrId")
-
-	err := h.db.From("category_attributes").Eq("id", attrID).Delete().Execute(nil)
-	if err != nil {
-		response.Error(w, http.StatusInternalServerError, "failed to delete attribute")
+	if err := h.svc.DeleteAttribute(r.Context(), chi.URLParam(r, "attrId")); err != nil {
+		response.ErrorFromAppError(w, r, err)
 		return
 	}
-
 	w.WriteHeader(http.StatusNoContent)
 }
 
 func (h *AttributeHandler) ListOptions(w http.ResponseWriter, r *http.Request) {
-	attrID := chi.URLParam(r, "attrId")
-
-	var options []AttributeOption
-	err := h.db.From("attribute_options").
-		Select("*").
-		Eq("category_attribute_id", attrID).
-		Order("sort_order", "asc").
-		Execute(&options)
+	options, err := h.svc.ListOptions(r.Context(), chi.URLParam(r, "attrId"))
 	if err != nil {
-		response.Error(w, http.StatusInternalServerError, "failed to fetch options")
+		response.ErrorFromAppError(w, r, err)
 		return
-	}
-
-	if options == nil {
-		options = []AttributeOption{}
 	}
 	response.JSON(w, http.StatusOK, options)
 }
 
 func (h *AttributeHandler) CreateOption(w http.ResponseWriter, r *http.Request) {
-	attrID := chi.URLParam(r, "attrId")
-
 	var req CreateAttributeOptionRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		response.Error(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
-	insertData := map[string]any{
-		"category_attribute_id": attrID,
-		"value":                 req.Value,
-		"sort_order":            req.SortOrder,
-	}
-
-	var created []AttributeOption
-	if err := h.db.From("attribute_options").Insert(insertData).Execute(&created); err != nil {
-		response.Error(w, http.StatusInternalServerError, "failed to create option")
+	option, err := h.svc.CreateOption(r.Context(), chi.URLParam(r, "attrId"), req)
+	if err != nil {
+		response.ErrorFromAppError(w, r, err)
 		return
 	}
-
-	response.JSON(w, http.StatusCreated, created[0])
+	response.JSON(w, http.StatusCreated, option)
 }
 
 func (h *AttributeHandler) DeleteOption(w http.ResponseWriter, r *http.Request) {
-	optionID := chi.URLParam(r, "optionId")
-
-	err := h.db.From("attribute_options").Eq("id", optionID).Delete().Execute(nil)
-	if err != nil {
-		response.Error(w, http.StatusInternalServerError, "failed to delete option")
+	if err := h.svc.DeleteOption(r.Context(), chi.URLParam(r, "optionId")); err != nil {
+		response.ErrorFromAppError(w, r, err)
 		return
 	}
-
 	w.WriteHeader(http.StatusNoContent)
 }

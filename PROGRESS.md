@@ -28,9 +28,9 @@ All 6 phases complete --> Plan 4: Admin Dashboard
 |-------|----|--------|--------|------|-------|
 | **1** | **1A:** Error Types + Response Envelope + Request ID | Done | feat/plan-5-phase-1-infrastructure | 2026-03-31 | PR #5. `apperror`, `requestid` (own package to avoid import cycle), `response/json.go` |
 | **1** | **1B:** Input Validation Framework | Done | feat/plan-5-phase-1-infrastructure | 2026-03-31 | PR #5. `validate` package, `Validate()` on 11 request structs |
-| **2** | **2A:** Catalog Service + Repository | Not Started | | | Extract catalog handlers → service + repo. **Fixes N+1** in SKUs and attributes |
-| **2** | **2B:** Cart Service + Repository | Not Started | | | Extract cart handler → service + repo |
-| **2** | **2C:** Checkout Service + Repository | Not Started | | | Extract checkout handler → service + repo |
+| **2** | **2A:** Catalog Service + Repository | Done | feat/plan-5-phase-2-service-layer | 2026-03-31 | N+1 fixed via embedded selects. 5 handlers refactored |
+| **2** | **2B:** Cart Service + Repository | Done | feat/plan-5-phase-2-service-layer | 2026-03-31 | Handler 418→90 lines. Auth error now 401 |
+| **2** | **2C:** Checkout Service + Repository | Done | feat/plan-5-phase-2-service-layer | 2026-03-31 | Handler 275→100 lines. Price conflict now structured |
 | **3** | **3A:** Indexes, Constraints, Soft Deletes | Not Started | | | Migration `00005`: composite indexes, active cart uniqueness, order soft delete |
 | **3** | **3B:** Atomic Operations via RPC | Not Started | | | Migration `00006`: `add_or_increment_cart_item`, `create_order_atomic`, idempotency key |
 | **3** | **3C:** Pagination + Search + Filtering | Not Started | | | Migration `00007`: FTS index + search RPC. `pagination` package. All list endpoints paginated |
