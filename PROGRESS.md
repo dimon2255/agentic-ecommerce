@@ -1,6 +1,6 @@
 # Plan 5: Architecture Overhaul — Progress
 
-## Status: In Progress
+## Status: Complete
 
 > Full audit of system design, backend architecture, and frontend UI/UX. 6 phases, 15 PRs, ~50 files.
 > See `.claude/plans/jazzy-watching-yeti.md` for the detailed plan file.
@@ -38,9 +38,9 @@ All 6 phases complete --> Plan 4: Admin Dashboard
 | **4** | **4B:** Rate Limiting + Request Timeout | Done | feat/plan-5-phase-4-security | 2026-03-31 | Token bucket per IP (100/20/50), 30s timeout, config extensions |
 | **5** | **5A:** Accessibility (WCAG 2.1 AA) | Done | feat/plan-5-phase-5-frontend-a11y | 2026-03-31 | Skip-to-content, form labels, aria-labels, focus-visible, semantic breadcrumbs, aria-live |
 | **5** | **5B:** Design System Token Unification | Done | feat/plan-5-phase-5-frontend-a11y | 2026-03-31 | 12 semantic status CSS vars, Tailwind safelist, Stripe CSS var refs, hardcoded colors replaced |
-| **6** | **6A:** useApi Overhaul + Data Fetching | Not Started | | | Timeout, retry, error interceptors. Fix frontend N+1. Cart fetch-once. Polling timeout |
-| **6** | **6B:** Skeleton Loaders + Toast + Optimistic Updates | Not Started | | | SkeletonCard, Toast system, per-item cart loading, optimistic updates |
-| **6** | **6C:** Remaining UX Polish | Not Started | | | Lazy images, form validation UX, password toggle, breadcrumbs |
+| **6** | **6A:** useApi Overhaul + Data Fetching | Done | feat/plan-5-phase-6-frontend-polish | 2026-03-31 | 30s timeout, auto-retry, N+1 fix via category_ids, cart fetch-once, polling timeout |
+| **6** | **6B:** Skeleton Loaders + Toast + Optimistic Updates | Done | feat/plan-5-phase-6-frontend-polish | 2026-03-31 | SkeletonCard, Toast system, per-item Set loading, optimistic qty updates |
+| **6** | **6C:** Remaining UX Polish | Done | feat/plan-5-phase-6-frontend-polish | 2026-03-31 | Lazy images on 3 components, password toggle on login+register, real-time match feedback |
 
 ## Phase Details (Quick Reference)
 
