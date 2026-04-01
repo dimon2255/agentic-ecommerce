@@ -34,8 +34,8 @@ All 6 phases complete --> Plan 4: Admin Dashboard
 | **3** | **3A:** Indexes, Constraints, Soft Deletes | Done | feat/plan-5-phase-3-db-performance | 2026-03-31 | Migration 00005. Composite indexes, active cart uniqueness, order soft delete, shipping CHECK |
 | **3** | **3B:** Atomic Operations via RPC | Done | feat/plan-5-phase-3-db-performance | 2026-03-31 | Migration 00006. Cart upsert RPC, atomic order creation, idempotency key |
 | **3** | **3C:** Pagination + Search + Filtering | Done | feat/plan-5-phase-3-db-performance | 2026-03-31 | Migration 00007. FTS, pagination pkg, Supabase Ilike/Fts/CountExact, multi-category filter |
-| **4** | **4A:** JWT + Security Headers + Stripe Fixes | Not Started | | | `iss`/`aud` validation, security headers, webhook replay, fix `In()` quoting |
-| **4** | **4B:** Rate Limiting + Request Timeout | Not Started | | | Token bucket per IP, request timeout, context-aware Supabase client |
+| **4** | **4A:** JWT + Security Headers + Stripe Fixes | Done | feat/plan-5-phase-4-security | 2026-03-31 | iss/aud validation, CSP, HSTS, webhook replay guard, In() fix, error sanitization |
+| **4** | **4B:** Rate Limiting + Request Timeout | Done | feat/plan-5-phase-4-security | 2026-03-31 | Token bucket per IP (100/20/50), 30s timeout, config extensions |
 | **5** | **5A:** Accessibility (WCAG 2.1 AA) | Not Started | | | Skip-to-content, form labels, aria-labels, focus-visible, semantic breadcrumbs |
 | **5** | **5B:** Design System Token Unification | Not Started | | | Semantic status colors, Tailwind safelist fix, single source of truth for tokens |
 | **6** | **6A:** useApi Overhaul + Data Fetching | Not Started | | | Timeout, retry, error interceptors. Fix frontend N+1. Cart fetch-once. Polling timeout |
