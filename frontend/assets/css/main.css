@@ -21,6 +21,19 @@
   --accent: #E8A838;
   --accent-hover: #F0BE5A;
   --accent-glow: rgba(232, 168, 56, 0.15);
+
+  --color-error: #EF4444;
+  --color-error-bg: rgba(239,68,68,0.1);
+  --color-error-border: rgba(239,68,68,0.2);
+  --color-warning: #F59E0B;
+  --color-warning-bg: rgba(245,158,11,0.1);
+  --color-warning-border: rgba(245,158,11,0.2);
+  --color-success: #10B981;
+  --color-success-bg: rgba(16,185,129,0.1);
+  --color-success-border: rgba(16,185,129,0.2);
+  --color-info: #3B82F6;
+  --color-info-bg: rgba(59,130,246,0.1);
+  --color-info-border: rgba(59,130,246,0.2);
 }
 
 *,
@@ -192,4 +205,11 @@ input, select, textarea {
   color: #0C0F17;
   font-weight: 700;
   box-shadow: 0 0 8px rgba(232, 168, 56, 0.4);
+}
+
+/* ---------- Focus-visible ---------- */
+
+*:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }

@@ -2,7 +2,7 @@
   <div class="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
 
     <!-- Payment Failed -->
-    <div v-if="redirectStatus === 'failed'" class="text-center py-20 animate-scale-in">
+    <div v-if="redirectStatus === 'failed'" role="alert" class="text-center py-20 animate-scale-in">
       <div class="w-16 h-16 bg-red-900/30 border border-red-700/30 rounded-full flex items-center justify-center mx-auto mb-5">
         <span class="text-red-400 text-3xl font-bold">&times;</span>
       </div>
@@ -14,7 +14,7 @@
     </div>
 
     <!-- Processing / Waiting for webhook -->
-    <div v-else-if="!order || order.status === 'draft' || order.status === 'pending'" class="text-center py-20 animate-fade-in">
+    <div v-else-if="!order || order.status === 'draft' || order.status === 'pending'" aria-live="polite" class="text-center py-20 animate-fade-in">
       <div class="w-12 h-12 border-[3px] border-accent border-t-transparent rounded-full animate-spin mx-auto mb-5"></div>
       <p class="text-secondary">Confirming your payment...</p>
     </div>

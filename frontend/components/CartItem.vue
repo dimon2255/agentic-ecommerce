@@ -22,14 +22,16 @@
       <button
         @click="$emit('update', item.id, item.quantity - 1)"
         :disabled="item.quantity <= 1 || updating"
+        aria-label="Decrease quantity"
         class="w-8 h-8 flex items-center justify-center rounded-md border border-[var(--border-strong)] text-secondary hover:text-[var(--text-primary)] hover:border-accent/30 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
       >
         -
       </button>
-      <span class="w-8 text-center text-sm font-medium text-[var(--text-primary)]">{{ item.quantity }}</span>
+      <span aria-live="polite" class="w-8 text-center text-sm font-medium text-[var(--text-primary)]">{{ item.quantity }}</span>
       <button
         @click="$emit('update', item.id, item.quantity + 1)"
         :disabled="updating"
+        aria-label="Increase quantity"
         class="w-8 h-8 flex items-center justify-center rounded-md border border-[var(--border-strong)] text-secondary hover:text-[var(--text-primary)] hover:border-accent/30 transition-colors disabled:opacity-30"
       >
         +
@@ -41,6 +43,7 @@
     <button
       @click="$emit('remove', item.id)"
       :disabled="updating"
+      aria-label="Remove item"
       class="text-muted hover:text-red-400 transition-colors disabled:opacity-30"
       title="Remove item"
     >

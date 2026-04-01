@@ -13,13 +13,13 @@
 
     <div v-else class="space-y-6 animate-fade-in-up delay-1">
       <!-- Step Indicator -->
-      <div class="flex items-center gap-3 mb-2">
-        <div class="flex items-center gap-2">
+      <div role="list" aria-label="Checkout steps" class="flex items-center gap-3 mb-2">
+        <div role="listitem" :aria-current="step === 'shipping' ? 'step' : undefined" class="flex items-center gap-2">
           <div :class="['w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold', step === 'shipping' ? 'btn-accent' : 'bg-accent/20 text-accent']">1</div>
           <span :class="['text-sm font-medium', step === 'shipping' ? 'text-[var(--text-primary)]' : 'text-secondary']">Shipping</span>
         </div>
         <div class="flex-1 h-px bg-[var(--border-default)]"></div>
-        <div class="flex items-center gap-2">
+        <div role="listitem" :aria-current="step === 'payment' ? 'step' : undefined" class="flex items-center gap-2">
           <div :class="['w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold', step === 'payment' ? 'btn-accent' : 'bg-surface-elevated border border-[var(--border-default)] text-muted']">2</div>
           <span :class="['text-sm font-medium', step === 'payment' ? 'text-[var(--text-primary)]' : 'text-muted']">Payment</span>
         </div>
@@ -43,7 +43,7 @@
       </div>
 
       <!-- Price Change Warning -->
-      <div v-if="priceChanges.length" class="bg-amber-900/20 border border-amber-700/30 rounded-xl p-4">
+      <div v-if="priceChanges.length" class="bg-[var(--color-warning-bg)] border border-[var(--color-warning-border)] rounded-xl p-4">
         <p class="font-medium text-amber-300 text-sm">Some prices have been updated:</p>
         <ul class="mt-2 text-sm text-amber-400/80">
           <li v-for="change in priceChanges" :key="change.sku_id">
@@ -58,39 +58,39 @@
         <h2 class="text-sm font-medium text-muted uppercase tracking-wider mb-5">Shipping Information</h2>
         <form @submit.prevent="handleStartCheckout" class="space-y-4">
           <div>
-            <label class="block text-sm font-medium text-secondary mb-1.5">Email</label>
-            <input v-model="form.email" type="email" required class="input-dark" />
+            <label for="email" class="block text-sm font-medium text-secondary mb-1.5">Email</label>
+            <input id="email" v-model="form.email" type="email" required class="input-dark" />
           </div>
           <div>
-            <label class="block text-sm font-medium text-secondary mb-1.5">Full Name</label>
-            <input v-model="form.name" type="text" required class="input-dark" />
+            <label for="shipping-name" class="block text-sm font-medium text-secondary mb-1.5">Full Name</label>
+            <input id="shipping-name" v-model="form.name" type="text" required class="input-dark" />
           </div>
           <div>
-            <label class="block text-sm font-medium text-secondary mb-1.5">Address</label>
-            <input v-model="form.line1" type="text" required class="input-dark" />
+            <label for="shipping-line1" class="block text-sm font-medium text-secondary mb-1.5">Address</label>
+            <input id="shipping-line1" v-model="form.line1" type="text" required class="input-dark" />
           </div>
           <div>
-            <label class="block text-sm font-medium text-secondary mb-1.5">Apartment, suite, etc. (optional)</label>
-            <input v-model="form.line2" type="text" class="input-dark" />
+            <label for="shipping-line2" class="block text-sm font-medium text-secondary mb-1.5">Apartment, suite, etc. (optional)</label>
+            <input id="shipping-line2" v-model="form.line2" type="text" class="input-dark" />
           </div>
           <div class="grid grid-cols-2 gap-4">
             <div>
-              <label class="block text-sm font-medium text-secondary mb-1.5">City</label>
-              <input v-model="form.city" type="text" required class="input-dark" />
+              <label for="shipping-city" class="block text-sm font-medium text-secondary mb-1.5">City</label>
+              <input id="shipping-city" v-model="form.city" type="text" required class="input-dark" />
             </div>
             <div>
-              <label class="block text-sm font-medium text-secondary mb-1.5">State / Province</label>
-              <input v-model="form.state" type="text" class="input-dark" />
+              <label for="shipping-state" class="block text-sm font-medium text-secondary mb-1.5">State / Province</label>
+              <input id="shipping-state" v-model="form.state" type="text" class="input-dark" />
             </div>
           </div>
           <div class="grid grid-cols-2 gap-4">
             <div>
-              <label class="block text-sm font-medium text-secondary mb-1.5">ZIP / Postal Code</label>
-              <input v-model="form.zip" type="text" required class="input-dark" />
+              <label for="shipping-zip" class="block text-sm font-medium text-secondary mb-1.5">ZIP / Postal Code</label>
+              <input id="shipping-zip" v-model="form.zip" type="text" required class="input-dark" />
             </div>
             <div>
-              <label class="block text-sm font-medium text-secondary mb-1.5">Country</label>
-              <input v-model="form.country" type="text" required class="input-dark" />
+              <label for="shipping-country" class="block text-sm font-medium text-secondary mb-1.5">Country</label>
+              <input id="shipping-country" v-model="form.country" type="text" required class="input-dark" />
             </div>
           </div>
 
@@ -98,7 +98,7 @@
             {{ checkoutLoading ? 'Processing...' : 'Continue to Payment' }}
           </button>
 
-          <p v-if="checkoutError" class="text-red-400 text-sm text-center">{{ checkoutError }}</p>
+          <p v-if="checkoutError" role="alert" class="text-[var(--color-error)] text-sm text-center">{{ checkoutError }}</p>
         </form>
       </div>
 
@@ -109,7 +109,7 @@
         <button @click="handlePayment" :disabled="paying" class="w-full btn-accent py-3.5 rounded-xl text-sm tracking-wide">
           {{ paying ? 'Processing payment...' : `Pay $${cartTotal.toFixed(2)}` }}
         </button>
-        <p v-if="paymentError" class="text-red-400 text-sm text-center mt-3">{{ paymentError }}</p>
+        <p v-if="paymentError" role="alert" class="text-[var(--color-error)] text-sm text-center mt-3">{{ paymentError }}</p>
         <button @click="step = 'shipping'" class="w-full text-sm text-muted hover:text-secondary mt-4 transition-colors">
           Back to shipping
         </button>

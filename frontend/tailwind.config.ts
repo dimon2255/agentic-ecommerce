@@ -31,6 +31,10 @@ export default {
         },
         muted: '#4A5268',
         secondary: '#8B95A8',
+        error: 'var(--color-error)',
+        warning: 'var(--color-warning)',
+        success: 'var(--color-success)',
+        info: 'var(--color-info)',
       },
       animation: {
         'fade-in-up': 'fade-in-up 0.55s ease-out both',
@@ -53,5 +57,6 @@ export default {
       },
     },
   },
+  safelist: ['delay-1', 'delay-2', 'delay-3', 'delay-4', 'delay-5', 'delay-6'],
   plugins: [],
 } satisfies Config

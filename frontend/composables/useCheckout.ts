@@ -84,15 +84,16 @@ export function useCheckout() {
   async function initStripe(clientSecret: string) {
     stripe = await loadStripe(config.public.stripeKey as string)
     if (!stripe) throw new Error('Failed to load Stripe')
+    const style = getComputedStyle(document.documentElement)
     elements = stripe.elements({
       clientSecret,
       appearance: {
         theme: 'night',
         variables: {
-          colorPrimary: '#E8A838',
-          colorBackground: '#171C28',
-          colorText: '#F0F2F5',
-          colorDanger: '#EF4444',
+          colorPrimary: style.getPropertyValue('--accent').trim(),
+          colorBackground: style.getPropertyValue('--bg-elevated').trim(),
+          colorText: style.getPropertyValue('--text-primary').trim(),
+          colorDanger: style.getPropertyValue('--color-error').trim(),
           fontFamily: 'DM Sans, sans-serif',
           borderRadius: '8px',
         },

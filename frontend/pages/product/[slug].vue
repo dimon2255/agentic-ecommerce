@@ -1,10 +1,16 @@
 <template>
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
     <div v-if="product" class="animate-fade-in">
-      <nav class="text-sm text-muted mb-6 flex items-center gap-2">
-        <NuxtLink to="/catalog" class="hover:text-secondary transition-colors">Catalog</NuxtLink>
-        <span class="text-muted/50">/</span>
-        <span class="text-secondary">{{ product.name }}</span>
+      <nav aria-label="Breadcrumb" class="text-sm text-muted mb-6">
+        <ol class="flex items-center gap-2">
+          <li><NuxtLink to="/catalog" class="hover:text-secondary transition-colors">Catalog</NuxtLink></li>
+          <li class="text-muted/50">/</li>
+          <li v-if="product.categories" class="flex items-center gap-2">
+            <NuxtLink :to="`/catalog/${product.categories.slug}`" class="hover:text-secondary transition-colors">{{ product.categories.name }}</NuxtLink>
+            <span class="text-muted/50">/</span>
+          </li>
+          <li aria-current="page" class="text-secondary">{{ product.name }}</li>
+        </ol>
       </nav>
 
       <div class="grid md:grid-cols-2 gap-12">
@@ -46,8 +52,9 @@
 
           <p
             v-if="addedMsg"
+            role="alert"
             class="mt-3 text-sm text-center font-medium"
-            :class="addedMsg === 'Added to cart!' ? 'text-emerald-400' : 'text-red-400'"
+            :class="addedMsg === 'Added to cart!' ? 'text-[var(--color-success)]' : 'text-[var(--color-error)]'"
           >
             {{ addedMsg }}
           </p>

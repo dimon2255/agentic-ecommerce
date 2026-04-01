@@ -1,10 +1,12 @@
 <template>
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
     <div v-if="category" class="animate-fade-in">
-      <nav class="text-sm text-muted mb-6 flex items-center gap-2">
-        <NuxtLink to="/catalog" class="hover:text-secondary transition-colors">Catalog</NuxtLink>
-        <span class="text-muted/50">/</span>
-        <span class="text-secondary">{{ category.name }}</span>
+      <nav aria-label="Breadcrumb" class="text-sm text-muted mb-6">
+        <ol class="flex items-center gap-2">
+          <li><NuxtLink to="/catalog" class="hover:text-secondary transition-colors">Catalog</NuxtLink></li>
+          <li class="text-muted/50">/</li>
+          <li aria-current="page" class="text-secondary">{{ category.name }}</li>
+        </ol>
       </nav>
 
       <h1 class="text-3xl font-display font-bold text-[var(--text-primary)] mb-2 animate-fade-in-up">
