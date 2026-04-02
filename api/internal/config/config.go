@@ -11,11 +11,12 @@ import (
 )
 
 type Config struct {
-	Server   ServerConfig   `mapstructure:"server"`
-	Supabase SupabaseConfig `mapstructure:"supabase"`
-	Stripe   StripeConfig   `mapstructure:"stripe"`
-	CORS     CORSConfig     `mapstructure:"cors"`
-	Checkout CheckoutConfig `mapstructure:"checkout"`
+	Server    ServerConfig    `mapstructure:"server"`
+	Supabase  SupabaseConfig  `mapstructure:"supabase"`
+	Stripe    StripeConfig    `mapstructure:"stripe"`
+	CORS      CORSConfig      `mapstructure:"cors"`
+	Checkout  CheckoutConfig  `mapstructure:"checkout"`
+	Assistant AssistantConfig `mapstructure:"assistant"`
 }
 
 type ServerConfig struct {
@@ -47,6 +48,13 @@ type CheckoutConfig struct {
 	WebhookMaxBodySize int64  `mapstructure:"webhook_max_body_size"`
 }
 
+type AssistantConfig struct {
+	AnthropicAPIKey string `mapstructure:"anthropic_api_key"`
+	VoyageAPIKey    string `mapstructure:"voyage_api_key"`
+	Model           string `mapstructure:"model"`
+	EmbeddingModel  string `mapstructure:"embedding_model"`
+}
+
 func Load(configPaths ...string) (*Config, error) {
 	// Load .env file if present (check current dir and parent dir)
 	for _, path := range []string{".env", "../.env"} {
@@ -68,6 +76,8 @@ func Load(configPaths ...string) (*Config, error) {
 	v.SetDefault("cors.max_age", 300)
 	v.SetDefault("checkout.payment_currency", "usd")
 	v.SetDefault("checkout.webhook_max_body_size", 65536)
+	v.SetDefault("assistant.model", "claude-sonnet-4-6-20250514")
+	v.SetDefault("assistant.embedding_model", "voyage-3-large")
 
 	// YAML config file
 	v.SetConfigName("config")
@@ -101,6 +111,10 @@ func Load(configPaths ...string) (*Config, error) {
 		"cors.max_age",
 		"checkout.payment_currency",
 		"checkout.webhook_max_body_size",
+		"assistant.anthropic_api_key",
+		"assistant.voyage_api_key",
+		"assistant.model",
+		"assistant.embedding_model",
 	} {
 		v.BindEnv(key)
 	}
