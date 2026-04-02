@@ -88,3 +88,72 @@ All 6 phases complete --> Plan 4: Admin Dashboard
 | Audit trail tables | Plan 5+ |
 | Page views TTL/partitioning | Plan 5+ |
 | Images text[] → JSONB | Plan 5+ |
+
+---
+
+# Plan 6: AI Shopping Assistant — Progress
+
+## Status: Phase 1 Complete — verified end-to-end 2026-04-01
+
+> Rufus-style conversational AI assistant. Anthropic Claude + Voyage AI embeddings + pgvector RAG.
+> See `.claude/plans/validated-crafting-minsky.md` for the Phase 1 detailed plan file.
+
+## Phase Overview
+
+```
+Phase 1: Data Foundation + Proof of Life ✓
+    |
+Phase 2: Tool Use + SSE Streaming
+    |
+Phase 3: Chat UX + Product Cards
+    |
+Phase 4: Auth Guards + Rate Limiting + Polish
+    |
+Phase 5: Personalization + Analytics (future/V2)
+```
+
+## Tracking Table
+
+| Phase | PR | Status | Branch | Date | Notes |
+|-------|----|--------|--------|------|-------|
+| **1** | **1A:** DB Migration + Config | Done | feat/ai-assistant-phase1-db | 2026-04-01 | pgvector, product_embeddings, chat_sessions, chat_messages, match_products RPC, AssistantConfig |
+| **1** | **1B:** Embedding Pipeline + Chat Backend | Done | feat/ai-assistant-phase1-db | 2026-04-01 | Voyage AI client, Anthropic client, internal/assistant/ domain, cmd/embed CLI, wiring in main.go |
+| **1** | **1C:** Frontend Proof of Life | Done | feat/ai-assistant-phase1-db | 2026-04-01 | useAssistant composable, pages/assistant.vue, nav link |
+| **2** | **2A:** Tool Definitions + Execution Loop | Pending | — | — | Claude tools: search_products, compare, get_details, get_cart, add_to_cart |
+| **2** | **2B:** SSE Streaming + Conversation Persistence | Pending | — | — | SSE endpoint, streaming Anthropic response, session history |
+| **3** | **3A:** Slide-over Chat Panel | Pending | — | — | 420px desktop panel, FAB trigger, mobile full-screen overlay |
+| **3** | **3B:** Product Cards + Suggestion Chips | Pending | — | — | Rich product cards in chat, comparison tables, quick-start chips |
+| **3** | **3C:** Mobile + Accessibility | Pending | — | — | Responsive, keyboard nav, aria-live, focus management |
+| **4** | **4A:** Rate Limiting + Cost Tracking | Pending | — | — | Per-user message quotas, Anthropic circuit breaker, tokens_used tracking |
+| **4** | **4B:** Guest Mode + System Prompt Polish | Pending | — | — | Limited guest tools, auth-gated actions, finalized guardrails |
+| **5** | TBD | Pending | — | — | Order history-aware recs, conversation analytics, A/B test prompts |
+
+## Phase 1 Details
+
+**Goal:** Prove end-to-end RAG chat works — user asks a product question, vector search retrieves relevant products, Claude generates a product-aware answer.
+
+**Architecture:**
+- **Embedding model:** Voyage AI `voyage-3-large` (1024 dims)
+- **Chat model:** Anthropic `claude-sonnet-4-5` (non-streaming for Phase 1)
+- **Vector store:** pgvector in Supabase PostgreSQL (HNSW index)
+- **New Go package:** `internal/assistant/` (handler → service → repository)
+- **New clients:** `pkg/voyage/`, `pkg/anthropic/`
+- **Frontend:** Minimal `pages/assistant.vue` + `useAssistant()` composable
+
+**Key files:**
+- `supabase/migrations/00008_ai_assistant.sql` — pgvector + tables + RPC
+- `api/internal/config/config.go` — AssistantConfig (API keys, model names)
+- `api/internal/assistant/` — handler, service, repository, embedding, prompts
+- `api/pkg/voyage/client.go` — embedding client
+- `api/pkg/anthropic/client.go` — chat completion client
+- `api/cmd/embed/main.go` — batch embedding CLI
+- `frontend/composables/useAssistant.ts` — chat state
+- `frontend/pages/assistant.vue` — chat page
+
+**NOT in Phase 1:** SSE streaming, tool use, slide-over panel, product cards, guest mode, rate limiting
+
+**Bugs fixed during Phase 1:**
+- Auth middleware only accepted HS256; Supabase now issues ES256 JWTs → added JWKS-based ES256 verification
+- `useSupabaseSession()` / `client.auth.getSession()` not resolving token → dual-path auth header resolution
+- Model ID `claude-sonnet-4-6-20250514` not found → corrected to `claude-sonnet-4-5` (no date suffix)
+- JWKS URL not derived when `JWTIssuer` config empty → fallback to Supabase URL

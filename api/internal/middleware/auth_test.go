@@ -27,7 +27,7 @@ func generateTestToken(t *testing.T, secret string, userID string, exp time.Time
 }
 
 func TestOptionalAuth_WithValidToken(t *testing.T) {
-	auth := NewAuthMiddleware(testJWTSecret, "", "")
+	auth := NewAuthMiddleware(testJWTSecret, "", "", "")
 
 	var capturedUserID string
 	handler := auth.OptionalAuth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -54,7 +54,7 @@ func TestOptionalAuth_WithValidToken(t *testing.T) {
 }
 
 func TestOptionalAuth_WithoutToken(t *testing.T) {
-	auth := NewAuthMiddleware(testJWTSecret, "", "")
+	auth := NewAuthMiddleware(testJWTSecret, "", "", "")
 
 	var hasUserID bool
 	handler := auth.OptionalAuth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -76,7 +76,7 @@ func TestOptionalAuth_WithoutToken(t *testing.T) {
 }
 
 func TestOptionalAuth_WithInvalidToken(t *testing.T) {
-	auth := NewAuthMiddleware(testJWTSecret, "", "")
+	auth := NewAuthMiddleware(testJWTSecret, "", "", "")
 
 	var hasUserID bool
 	handler := auth.OptionalAuth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -99,7 +99,7 @@ func TestOptionalAuth_WithInvalidToken(t *testing.T) {
 }
 
 func TestRequireAuth_WithValidToken(t *testing.T) {
-	auth := NewAuthMiddleware(testJWTSecret, "", "")
+	auth := NewAuthMiddleware(testJWTSecret, "", "", "")
 
 	var capturedUserID string
 	handler := auth.RequireAuth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -124,7 +124,7 @@ func TestRequireAuth_WithValidToken(t *testing.T) {
 }
 
 func TestRequireAuth_WithoutToken(t *testing.T) {
-	auth := NewAuthMiddleware(testJWTSecret, "", "")
+	auth := NewAuthMiddleware(testJWTSecret, "", "", "")
 
 	handler := auth.RequireAuth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		t.Error("handler should not be called")
@@ -141,7 +141,7 @@ func TestRequireAuth_WithoutToken(t *testing.T) {
 }
 
 func TestRequireAuth_WithExpiredToken(t *testing.T) {
-	auth := NewAuthMiddleware(testJWTSecret, "", "")
+	auth := NewAuthMiddleware(testJWTSecret, "", "", "")
 
 	handler := auth.RequireAuth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		t.Error("handler should not be called")

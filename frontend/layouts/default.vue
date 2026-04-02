@@ -17,6 +17,13 @@
               Catalog
             </NuxtLink>
             <NuxtLink
+              to="/assistant"
+              :aria-current="route.path === '/assistant' ? 'page' : undefined"
+              class="text-sm font-medium text-secondary hover:text-[var(--text-primary)] transition-colors relative after:absolute after:bottom-[-4px] after:left-0 after:w-0 after:h-[2px] after:bg-accent after:transition-all after:duration-300 hover:after:w-full"
+            >
+              Assistant
+            </NuxtLink>
+            <NuxtLink
               to="/cart"
               :aria-current="route.path === '/cart' ? 'page' : undefined"
               class="text-sm font-medium text-secondary hover:text-[var(--text-primary)] transition-colors relative"

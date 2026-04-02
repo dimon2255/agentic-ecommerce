@@ -26,6 +26,7 @@ export default defineNuxtConfig({
     '/catalog/**': { ssr: true },
     '/product/**': { ssr: true },
     '/cart': { ssr: false },
+    '/assistant': { ssr: false },
     '/checkout': { ssr: false },
     '/auth/**': { ssr: false },
     '/account/**': { ssr: false },

@@ -10,14 +10,17 @@ import (
 	chimiddleware "github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
 
+	"github.com/dimon2255/agentic-ecommerce/api/internal/assistant"
 	"github.com/dimon2255/agentic-ecommerce/api/internal/cart"
 	"github.com/dimon2255/agentic-ecommerce/api/internal/catalog"
 	"github.com/dimon2255/agentic-ecommerce/api/internal/checkout"
 	"github.com/dimon2255/agentic-ecommerce/api/internal/config"
 	"github.com/dimon2255/agentic-ecommerce/api/internal/middleware"
 	"github.com/dimon2255/agentic-ecommerce/api/internal/requestid"
+	"github.com/dimon2255/agentic-ecommerce/api/pkg/anthropic"
 	stripeClient "github.com/dimon2255/agentic-ecommerce/api/pkg/stripe"
 	"github.com/dimon2255/agentic-ecommerce/api/pkg/supabase"
+	"github.com/dimon2255/agentic-ecommerce/api/pkg/voyage"
 )
 
 func main() {
@@ -27,7 +30,7 @@ func main() {
 	}
 
 	db := supabase.NewClient(cfg.Supabase.URL, cfg.Supabase.ServiceRoleKey, cfg.Supabase.Timeout)
-	auth := middleware.NewAuthMiddleware(cfg.Supabase.JWTSecret, cfg.Supabase.JWTIssuer, cfg.Supabase.JWTAudience)
+	auth := middleware.NewAuthMiddleware(cfg.Supabase.JWTSecret, cfg.Supabase.JWTIssuer, cfg.Supabase.JWTAudience, cfg.Supabase.URL)
 
 	// Rate limiters
 	apiLimiter := middleware.NewRateLimiter(100, time.Minute)
@@ -49,6 +52,13 @@ func main() {
 	checkoutRepo := checkout.NewSupabaseRepository(db)
 	checkoutSvc := checkout.NewService(checkoutRepo, stripePayments, cfg.Checkout.PaymentCurrency)
 	checkoutHandler := checkout.NewCheckoutHandler(checkoutSvc, stripePayments, cfg.Checkout.WebhookMaxBodySize)
+
+	// AI Shopping Assistant
+	voyageClient := voyage.NewClient(cfg.Assistant.VoyageAPIKey, cfg.Assistant.EmbeddingModel)
+	anthropicClient := anthropic.NewClient(cfg.Assistant.AnthropicAPIKey, cfg.Assistant.Model)
+	assistantRepo := assistant.NewSupabaseRepository(db)
+	assistantSvc := assistant.NewService(assistantRepo, voyageClient, anthropicClient)
+	assistantHandler := assistant.NewHandler(assistantSvc)
 
 	r := chi.NewRouter()
 
@@ -88,6 +98,12 @@ func main() {
 		r.Group(func(r chi.Router) {
 			r.Use(auth.OptionalAuth)
 			r.Mount("/cart", cartHandler.Routes())
+		})
+
+		// AI Assistant routes — requires authentication
+		r.Route("/assistant", func(r chi.Router) {
+			r.Use(auth.RequireAuth)
+			r.Mount("/", assistantHandler.Routes())
 		})
 
 		// Checkout and order routes
