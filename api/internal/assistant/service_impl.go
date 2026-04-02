@@ -4,6 +4,7 @@ import (
 	"context"
 	_ "embed"
 	"fmt"
+	"log"
 	"strings"
 
 	"github.com/dimon2255/agentic-ecommerce/api/internal/apperror"
@@ -57,6 +58,7 @@ func (s *assistantService) Chat(ctx context.Context, userID string, req ChatRequ
 	// Embed user query for semantic search
 	embeddings, err := s.voyage.Embed(ctx, []string{req.Message})
 	if err != nil {
+		log.Printf("[assistant] Voyage embed error: %v", err)
 		return nil, apperror.NewInternal("failed to embed query", err)
 	}
 	if len(embeddings) == 0 {
@@ -81,6 +83,7 @@ func (s *assistantService) Chat(ctx context.Context, userID string, req ChatRequ
 		MaxTokens: 1024,
 	})
 	if err != nil {
+		log.Printf("[assistant] Anthropic API error: %v", err)
 		return nil, apperror.NewInternal("failed to generate response", err)
 	}
 

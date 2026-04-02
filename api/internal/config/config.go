@@ -76,7 +76,7 @@ func Load(configPaths ...string) (*Config, error) {
 	v.SetDefault("cors.max_age", 300)
 	v.SetDefault("checkout.payment_currency", "usd")
 	v.SetDefault("checkout.webhook_max_body_size", 65536)
-	v.SetDefault("assistant.model", "claude-sonnet-4-6-20250514")
+	v.SetDefault("assistant.model", "claude-sonnet-4-5-20241022")
 	v.SetDefault("assistant.embedding_model", "voyage-3-large")
 
 	// YAML config file
