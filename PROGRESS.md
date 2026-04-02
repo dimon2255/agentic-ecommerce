@@ -93,7 +93,7 @@ All 6 phases complete --> Plan 4: Admin Dashboard
 
 # Plan 6: AI Shopping Assistant — Progress
 
-## Status: In Progress (Phase 1)
+## Status: Phase 1 Complete — verified end-to-end 2026-04-01
 
 > Rufus-style conversational AI assistant. Anthropic Claude + Voyage AI embeddings + pgvector RAG.
 > See `.claude/plans/validated-crafting-minsky.md` for the Phase 1 detailed plan file.
@@ -101,7 +101,7 @@ All 6 phases complete --> Plan 4: Admin Dashboard
 ## Phase Overview
 
 ```
-Phase 1: Data Foundation + Proof of Life (current)
+Phase 1: Data Foundation + Proof of Life ✓
     |
 Phase 2: Tool Use + SSE Streaming
     |
@@ -134,7 +134,7 @@ Phase 5: Personalization + Analytics (future/V2)
 
 **Architecture:**
 - **Embedding model:** Voyage AI `voyage-3-large` (1024 dims)
-- **Chat model:** Anthropic `claude-sonnet-4-6` (non-streaming for Phase 1)
+- **Chat model:** Anthropic `claude-sonnet-4-5` (non-streaming for Phase 1)
 - **Vector store:** pgvector in Supabase PostgreSQL (HNSW index)
 - **New Go package:** `internal/assistant/` (handler → service → repository)
 - **New clients:** `pkg/voyage/`, `pkg/anthropic/`
@@ -151,3 +151,9 @@ Phase 5: Personalization + Analytics (future/V2)
 - `frontend/pages/assistant.vue` — chat page
 
 **NOT in Phase 1:** SSE streaming, tool use, slide-over panel, product cards, guest mode, rate limiting
+
+**Bugs fixed during Phase 1:**
+- Auth middleware only accepted HS256; Supabase now issues ES256 JWTs → added JWKS-based ES256 verification
+- `useSupabaseSession()` / `client.auth.getSession()` not resolving token → dual-path auth header resolution
+- Model ID `claude-sonnet-4-6-20250514` not found → corrected to `claude-sonnet-4-5` (no date suffix)
+- JWKS URL not derived when `JWTIssuer` config empty → fallback to Supabase URL
