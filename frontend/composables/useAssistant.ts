@@ -13,17 +13,31 @@ interface ChatResponse {
 
 export function useAssistant() {
   const { post } = useApi()
-  const session = useSupabaseSession()
+  const supabase = useSupabaseClient()
 
   const messages = useState<ChatMessage[]>('assistant-messages', () => [])
   const sessionId = useState<string | null>('assistant-session', () => null)
   const loading = useState('assistant-loading', () => false)
   const error = useState<string | null>('assistant-error', () => null)
 
-  function getHeaders(): Record<string, string> {
+  async function getHeaders(): Promise<Record<string, string>> {
     const headers: Record<string, string> = {}
-    if (session.value?.access_token) {
-      headers['Authorization'] = `Bearer ${session.value.access_token}`
+
+    // Try reactive session state first
+    const authSession = useSupabaseSession()
+    if (authSession.value?.access_token) {
+      headers['Authorization'] = `Bearer ${authSession.value.access_token}`
+      return headers
+    }
+
+    // Fallback: fetch session from Supabase client
+    try {
+      const { data } = await supabase.auth.getSession()
+      if (data.session?.access_token) {
+        headers['Authorization'] = `Bearer ${data.session.access_token}`
+      }
+    } catch {
+      // No auth available
     }
     return headers
   }
@@ -44,7 +58,7 @@ export function useAssistant() {
     }]
 
     try {
-      const headers = getHeaders()
+      const headers = await getHeaders()
       const body: Record<string, string> = { message: content }
       if (sessionId.value) {
         body.session_id = sessionId.value
