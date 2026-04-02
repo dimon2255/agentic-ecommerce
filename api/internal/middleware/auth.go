@@ -31,17 +31,20 @@ type AuthMiddleware struct {
 }
 
 // NewAuthMiddleware creates auth middleware. Issuer and audience are optional —
-// if non-empty, JWT claims are validated against them.
-func NewAuthMiddleware(jwtSecret, issuer, audience string) *AuthMiddleware {
+// if non-empty, JWT claims are validated against them. supabaseURL is used to
+// derive the JWKS endpoint for ES256 token verification.
+func NewAuthMiddleware(jwtSecret, issuer, audience, supabaseURL string) *AuthMiddleware {
 	m := &AuthMiddleware{
 		jwtSecret: []byte(jwtSecret),
 		issuer:    issuer,
 		audience:  audience,
 		jwksKeys:  make(map[string]*ecdsa.PublicKey),
 	}
-	// Derive JWKS URL from issuer (e.g. http://127.0.0.1:54321/auth/v1 → .well-known/jwks.json)
+	// Derive JWKS URL from Supabase URL or issuer
 	if issuer != "" {
 		m.jwksURL = strings.TrimSuffix(issuer, "/") + "/.well-known/jwks.json"
+	} else if supabaseURL != "" {
+		m.jwksURL = strings.TrimSuffix(supabaseURL, "/") + "/auth/v1/.well-known/jwks.json"
 	}
 	return m
 }
