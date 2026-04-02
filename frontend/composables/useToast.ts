@@ -7,14 +7,14 @@ interface Toast {
 }
 
 let nextId = 0
-const toasts = useState<Toast[]>('toasts', () => [])
 
 export function useToast() {
+  const toasts = useState<Toast[]>('toasts', () => [])
+
   function showToast(message: string, variant: ToastVariant = 'info', duration = 4000) {
     const id = nextId++
     toasts.value.push({ id, message, variant })
 
-    // Keep max 3 visible
     if (toasts.value.length > 3) {
       toasts.value.shift()
     }
