@@ -13,22 +13,17 @@ interface ChatResponse {
 
 export function useAssistant() {
   const { post } = useApi()
-  const client = useSupabaseClient()
+  const session = useSupabaseSession()
 
   const messages = useState<ChatMessage[]>('assistant-messages', () => [])
   const sessionId = useState<string | null>('assistant-session', () => null)
   const loading = useState('assistant-loading', () => false)
   const error = useState<string | null>('assistant-error', () => null)
 
-  async function getHeaders(): Promise<Record<string, string>> {
+  function getHeaders(): Record<string, string> {
     const headers: Record<string, string> = {}
-    try {
-      const { data: { session } } = await client.auth.getSession()
-      if (session?.access_token) {
-        headers['Authorization'] = `Bearer ${session.access_token}`
-      }
-    } catch {
-      // No auth available
+    if (session.value?.access_token) {
+      headers['Authorization'] = `Bearer ${session.value.access_token}`
     }
     return headers
   }
@@ -49,7 +44,7 @@ export function useAssistant() {
     }]
 
     try {
-      const headers = await getHeaders()
+      const headers = getHeaders()
       const body: Record<string, string> = { message: content }
       if (sessionId.value) {
         body.session_id = sessionId.value
