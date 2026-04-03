@@ -55,19 +55,21 @@
                 : 'mr-auto card-dark rounded-bl-md'
             ]"
           >
-            <div class="whitespace-pre-wrap" v-text="msg.content" />
-          </div>
-
-          <!-- Loading indicator -->
-          <div v-if="loading" class="mr-auto card-dark max-w-[85%] px-4 py-3 rounded-2xl rounded-bl-md">
-            <div class="flex items-center gap-2 text-sm text-muted">
+            <!-- Thinking indicator (tool execution in progress) -->
+            <div v-if="msg.status === 'thinking' && !msg.content" class="flex items-center gap-2 text-muted">
               <span class="flex gap-1">
                 <span class="w-1.5 h-1.5 bg-accent rounded-full animate-bounce" style="animation-delay: 0ms" />
                 <span class="w-1.5 h-1.5 bg-accent rounded-full animate-bounce" style="animation-delay: 150ms" />
                 <span class="w-1.5 h-1.5 bg-accent rounded-full animate-bounce" style="animation-delay: 300ms" />
               </span>
-              Thinking...
+              Searching products...
             </div>
+
+            <!-- Content (streaming or complete) -->
+            <template v-else>
+              <div class="whitespace-pre-wrap" v-text="msg.content" />
+              <span v-if="msg.status === 'streaming'" class="inline-block w-1.5 h-4 bg-accent animate-pulse ml-0.5 align-text-bottom" />
+            </template>
           </div>
 
           <!-- Error -->

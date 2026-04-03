@@ -160,6 +160,129 @@ func TestCompleteWithTools_DefaultMaxTokens(t *testing.T) {
 	}
 }
 
+// --- Streaming tests ---
+
+func TestStreamWithTools_TextOnly(t *testing.T) {
+	sseBody := "event: message_start\ndata: {\"type\":\"message_start\"}\n\n" +
+		"event: content_block_start\ndata: {\"type\":\"content_block_start\",\"index\":0,\"content_block\":{\"type\":\"text\",\"text\":\"\"}}\n\n" +
+		"event: content_block_delta\ndata: {\"type\":\"content_block_delta\",\"index\":0,\"delta\":{\"type\":\"text_delta\",\"text\":\"Hello \"}}\n\n" +
+		"event: content_block_delta\ndata: {\"type\":\"content_block_delta\",\"index\":0,\"delta\":{\"type\":\"text_delta\",\"text\":\"world!\"}}\n\n" +
+		"event: content_block_stop\ndata: {\"type\":\"content_block_stop\",\"index\":0}\n\n" +
+		"event: message_delta\ndata: {\"type\":\"message_delta\",\"delta\":{\"stop_reason\":\"end_turn\"}}\n\n" +
+		"event: message_stop\ndata: {\"type\":\"message_stop\"}\n\n"
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Verify stream=true in request
+		var body map[string]any
+		json.NewDecoder(r.Body).Decode(&body)
+		if body["stream"] != true {
+			t.Error("expected stream=true")
+		}
+
+		w.Header().Set("Content-Type", "text/event-stream")
+		w.Write([]byte(sseBody))
+	}))
+	defer server.Close()
+
+	client := NewClient("test-key", "test-model")
+	client.SetBaseURL(server.URL)
+
+	var deltas []string
+	resp, err := client.StreamWithTools(context.Background(), ToolCompletionRequest{
+		Messages: []RichMessage{{Role: "user", Content: "hi"}},
+	}, func(event StreamEvent) {
+		if event.Type == "content_block_delta" && event.DeltaType == "text_delta" {
+			deltas = append(deltas, event.DeltaText)
+		}
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if resp.StopReason != "end_turn" {
+		t.Errorf("expected stop_reason=end_turn, got %s", resp.StopReason)
+	}
+	if resp.TextContent() != "Hello world!" {
+		t.Errorf("expected 'Hello world!', got '%s'", resp.TextContent())
+	}
+	if len(deltas) != 2 {
+		t.Errorf("expected 2 deltas, got %d", len(deltas))
+	}
+}
+
+func TestStreamWithTools_ToolUse(t *testing.T) {
+	sseBody := "event: message_start\ndata: {\"type\":\"message_start\"}\n\n" +
+		"event: content_block_start\ndata: {\"type\":\"content_block_start\",\"index\":0,\"content_block\":{\"type\":\"text\",\"text\":\"\"}}\n\n" +
+		"event: content_block_delta\ndata: {\"type\":\"content_block_delta\",\"index\":0,\"delta\":{\"type\":\"text_delta\",\"text\":\"Searching...\"}}\n\n" +
+		"event: content_block_stop\ndata: {\"type\":\"content_block_stop\",\"index\":0}\n\n" +
+		"event: content_block_start\ndata: {\"type\":\"content_block_start\",\"index\":1,\"content_block\":{\"type\":\"tool_use\",\"id\":\"toolu_01\",\"name\":\"search_products\",\"input\":{}}}\n\n" +
+		"event: content_block_delta\ndata: {\"type\":\"content_block_delta\",\"index\":1,\"delta\":{\"type\":\"input_json_delta\",\"partial_json\":\"{\\\"query\\\":\"}}\n\n" +
+		"event: content_block_delta\ndata: {\"type\":\"content_block_delta\",\"index\":1,\"delta\":{\"type\":\"input_json_delta\",\"partial_json\":\"\\\"laptops\\\"}\"}}\n\n" +
+		"event: content_block_stop\ndata: {\"type\":\"content_block_stop\",\"index\":1}\n\n" +
+		"event: message_delta\ndata: {\"type\":\"message_delta\",\"delta\":{\"stop_reason\":\"tool_use\"}}\n\n" +
+		"event: message_stop\ndata: {\"type\":\"message_stop\"}\n\n"
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/event-stream")
+		w.Write([]byte(sseBody))
+	}))
+	defer server.Close()
+
+	client := NewClient("test-key", "test-model")
+	client.SetBaseURL(server.URL)
+
+	var sawToolStart bool
+	resp, err := client.StreamWithTools(context.Background(), ToolCompletionRequest{
+		Messages: []RichMessage{{Role: "user", Content: "laptops"}},
+	}, func(event StreamEvent) {
+		if event.Type == "content_block_start" && event.ContentBlock != nil && event.ContentBlock.Type == "tool_use" {
+			sawToolStart = true
+		}
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if resp.StopReason != "tool_use" {
+		t.Errorf("expected stop_reason=tool_use, got %s", resp.StopReason)
+	}
+	if !sawToolStart {
+		t.Error("expected tool_use content_block_start event")
+	}
+
+	toolBlocks := resp.ToolUseBlocks()
+	if len(toolBlocks) != 1 {
+		t.Fatalf("expected 1 tool_use block, got %d", len(toolBlocks))
+	}
+	if toolBlocks[0].Name != "search_products" {
+		t.Errorf("expected tool name=search_products, got %s", toolBlocks[0].Name)
+	}
+	if string(toolBlocks[0].Input) != `{"query":"laptops"}` {
+		t.Errorf("unexpected tool input: %s", string(toolBlocks[0].Input))
+	}
+}
+
+func TestStreamWithTools_APIError(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]any{
+			"error": map[string]any{"type": "invalid_request_error", "message": "bad"},
+		})
+	}))
+	defer server.Close()
+
+	client := NewClient("test-key", "test-model")
+	client.SetBaseURL(server.URL)
+
+	_, err := client.StreamWithTools(context.Background(), ToolCompletionRequest{
+		Messages: []RichMessage{{Role: "user", Content: "hi"}},
+	}, func(event StreamEvent) {})
+
+	if err == nil {
+		t.Fatal("expected error for 400 response")
+	}
+}
+
 func TestRichMessage_MarshalJSON(t *testing.T) {
 	// String content
 	msg := RichMessage{Role: "user", Content: "hello"}
