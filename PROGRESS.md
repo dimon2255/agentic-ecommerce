@@ -93,7 +93,7 @@ All 6 phases complete --> Plan 4: Admin Dashboard
 
 # Plan 6: AI Shopping Assistant — Progress
 
-## Status: Phase 2 In Progress
+## Status: Phase 2 Complete — verified end-to-end 2026-04-02
 
 > Rufus-style conversational AI assistant. Anthropic Claude + Voyage AI embeddings + pgvector RAG.
 > See `.claude/plans/validated-crafting-minsky.md` for the Phase 1 detailed plan file.
@@ -103,7 +103,7 @@ All 6 phases complete --> Plan 4: Admin Dashboard
 ```
 Phase 1: Data Foundation + Proof of Life ✓
     |
-Phase 2: Tool Use + SSE Streaming
+Phase 2: Tool Use + SSE Streaming ✓
     |
 Phase 3: Chat UX + Product Cards
     |
@@ -157,3 +157,21 @@ Phase 5: Personalization + Analytics (future/V2)
 - `useSupabaseSession()` / `client.auth.getSession()` not resolving token → dual-path auth header resolution
 - Model ID `claude-sonnet-4-6-20250514` not found → corrected to `claude-sonnet-4-5` (no date suffix)
 - JWKS URL not derived when `JWTIssuer` config empty → fallback to Supabase URL
+
+### Phase 2: Tool Use + SSE Streaming
+- **Goal:** Make the assistant agentic — Claude calls tools to search products, view details, manage the cart — and streams responses via SSE for real-time UX.
+- **5 tools:** `search_products`, `get_product_details`, `get_categories`, `get_cart`, `add_to_cart` — all dispatch to existing catalog/cart service methods
+- **Agentic loop:** max 5 iterations, 2048 max tokens, tool results not persisted to DB
+- **SSE streaming:** `StreamWithTools()` parses Anthropic SSE events, `POST /assistant/stream` endpoint
+- **Conversation history:** `buildConversationMessages()` caps at 20, enforces role alternation
+- **Timeout restructure:** moved from global to per-group so SSE bypasses `http.TimeoutHandler`
+- **Frontend:** `fetch()` + `ReadableStream`, message status states, markdown rendering via `marked`
+- **Test:** `go test ./...` (29 tests), `npm run build`
+
+**Bugs fixed during Phase 2:**
+- SSE `eventType` lost across TCP chunk boundaries → moved variable outside while loop
+- `tool_use.input` field omitted when nil/empty → `len(block.Input) == 0` check + fallback to `{}`
+- Claude passing `sku_code` instead of UUID `id` for `add_to_cart` → clarified tool description + system prompt
+- Cart creation fails with empty sessionID → generate deterministic `assistant-{userID}` session
+- Streaming cursor persists after completion → force `status: 'complete'` in finally block
+- `http.TimeoutHandler` kills `http.Flusher` → timeout middleware per-group, not global
