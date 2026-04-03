@@ -93,7 +93,7 @@ All 6 phases complete --> Plan 4: Admin Dashboard
 
 # Plan 6: AI Shopping Assistant — Progress
 
-## Status: Phase 1 Complete — verified end-to-end 2026-04-01
+## Status: Phase 2 Complete — verified end-to-end 2026-04-02
 
 > Rufus-style conversational AI assistant. Anthropic Claude + Voyage AI embeddings + pgvector RAG.
 > See `.claude/plans/validated-crafting-minsky.md` for the Phase 1 detailed plan file.
@@ -103,7 +103,7 @@ All 6 phases complete --> Plan 4: Admin Dashboard
 ```
 Phase 1: Data Foundation + Proof of Life ✓
     |
-Phase 2: Tool Use + SSE Streaming
+Phase 2: Tool Use + SSE Streaming ✓
     |
 Phase 3: Chat UX + Product Cards
     |
@@ -119,8 +119,8 @@ Phase 5: Personalization + Analytics (future/V2)
 | **1** | **1A:** DB Migration + Config | Done | feat/ai-assistant-phase1-db | 2026-04-01 | pgvector, product_embeddings, chat_sessions, chat_messages, match_products RPC, AssistantConfig |
 | **1** | **1B:** Embedding Pipeline + Chat Backend | Done | feat/ai-assistant-phase1-db | 2026-04-01 | Voyage AI client, Anthropic client, internal/assistant/ domain, cmd/embed CLI, wiring in main.go |
 | **1** | **1C:** Frontend Proof of Life | Done | feat/ai-assistant-phase1-db | 2026-04-01 | useAssistant composable, pages/assistant.vue, nav link |
-| **2** | **2A:** Tool Definitions + Execution Loop | Pending | — | — | Claude tools: search_products, compare, get_details, get_cart, add_to_cart |
-| **2** | **2B:** SSE Streaming + Conversation Persistence | Pending | — | — | SSE endpoint, streaming Anthropic response, session history |
+| **2** | **2A:** Tool Definitions + Execution Loop | Done | feat/ai-assistant-phase2-tools | 2026-04-02 | PR #14. 5 tools → catalog/cart services, agentic loop (max 5 iter), CompleteWithTools, /tools route, 17 tests |
+| **2** | **2B:** SSE Streaming + Conversation Persistence | Done | feat/ai-assistant-phase2-tools | 2026-04-02 | PR #14. StreamWithTools, SSE handler, timeout bypass, history helper, frontend fetch+ReadableStream, 29 tests |
 | **3** | **3A:** Slide-over Chat Panel | Pending | — | — | 420px desktop panel, FAB trigger, mobile full-screen overlay |
 | **3** | **3B:** Product Cards + Suggestion Chips | Pending | — | — | Rich product cards in chat, comparison tables, quick-start chips |
 | **3** | **3C:** Mobile + Accessibility | Pending | — | — | Responsive, keyboard nav, aria-live, focus management |
@@ -157,3 +157,21 @@ Phase 5: Personalization + Analytics (future/V2)
 - `useSupabaseSession()` / `client.auth.getSession()` not resolving token → dual-path auth header resolution
 - Model ID `claude-sonnet-4-6-20250514` not found → corrected to `claude-sonnet-4-5` (no date suffix)
 - JWKS URL not derived when `JWTIssuer` config empty → fallback to Supabase URL
+
+### Phase 2: Tool Use + SSE Streaming
+- **Goal:** Make the assistant agentic — Claude calls tools to search products, view details, manage the cart — and streams responses via SSE for real-time UX.
+- **5 tools:** `search_products`, `get_product_details`, `get_categories`, `get_cart`, `add_to_cart` — all dispatch to existing catalog/cart service methods
+- **Agentic loop:** max 5 iterations, 2048 max tokens, tool results not persisted to DB
+- **SSE streaming:** `StreamWithTools()` parses Anthropic SSE events, `POST /assistant/stream` endpoint
+- **Conversation history:** `buildConversationMessages()` caps at 20, enforces role alternation
+- **Timeout restructure:** moved from global to per-group so SSE bypasses `http.TimeoutHandler`
+- **Frontend:** `fetch()` + `ReadableStream`, message status states, markdown rendering via `marked`
+- **Test:** `go test ./...` (29 tests), `npm run build`
+
+**Bugs fixed during Phase 2:**
+- SSE `eventType` lost across TCP chunk boundaries → moved variable outside while loop
+- `tool_use.input` field omitted when nil/empty → `len(block.Input) == 0` check + fallback to `{}`
+- Claude passing `sku_code` instead of UUID `id` for `add_to_cart` → clarified tool description + system prompt
+- Cart creation fails with empty sessionID → generate deterministic `assistant-{userID}` session
+- Streaming cursor persists after completion → force `status: 'complete'` in finally block
+- `http.TimeoutHandler` kills `http.Flusher` → timeout middleware per-group, not global

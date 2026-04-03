@@ -57,7 +57,7 @@ func main() {
 	voyageClient := voyage.NewClient(cfg.Assistant.VoyageAPIKey, cfg.Assistant.EmbeddingModel)
 	anthropicClient := anthropic.NewClient(cfg.Assistant.AnthropicAPIKey, cfg.Assistant.Model)
 	assistantRepo := assistant.NewSupabaseRepository(db)
-	assistantSvc := assistant.NewService(assistantRepo, voyageClient, anthropicClient)
+	assistantSvc := assistant.NewService(assistantRepo, voyageClient, anthropicClient, catalogSvc, cartSvc)
 	assistantHandler := assistant.NewHandler(assistantSvc)
 
 	r := chi.NewRouter()
@@ -66,7 +66,8 @@ func main() {
 	r.Use(chimiddleware.Logger)
 	r.Use(chimiddleware.Recoverer)
 	r.Use(middleware.SecurityHeaders)
-	r.Use(middleware.Timeout(cfg.Server.RequestTimeout))
+	// Note: Timeout middleware is applied per-group (not globally) so SSE streaming routes
+	// can bypass http.TimeoutHandler which doesn't support http.Flusher.
 	r.Use(cors.Handler(cors.Options{
 		AllowedOrigins:   cfg.CORS.AllowedOrigins,
 		AllowedMethods:   []string{"GET", "POST", "PATCH", "DELETE", "OPTIONS"},
@@ -84,43 +85,56 @@ func main() {
 
 	r.Route("/api/v1", func(r chi.Router) {
 		r.Use(apiLimiter.Middleware)
-		r.Mount("/categories", categoryHandler.Routes())
-		r.Route("/categories/{categoryId}/attributes", func(r chi.Router) {
-			r.Mount("/", attributeHandler.Routes())
-		})
-		r.Mount("/products", productHandler.Routes())
-		r.Route("/products/{productId}/skus", func(r chi.Router) {
-			r.Mount("/", skuHandler.Routes())
-		})
-		r.Mount("/custom-fields", customFieldHandler.Routes())
 
-		// Cart routes — OptionalAuth so both guests and users can access
+		// Standard routes with request timeout
 		r.Group(func(r chi.Router) {
-			r.Use(auth.OptionalAuth)
-			r.Mount("/cart", cartHandler.Routes())
+			r.Use(middleware.Timeout(cfg.Server.RequestTimeout))
+
+			r.Mount("/categories", categoryHandler.Routes())
+			r.Route("/categories/{categoryId}/attributes", func(r chi.Router) {
+				r.Mount("/", attributeHandler.Routes())
+			})
+			r.Mount("/products", productHandler.Routes())
+			r.Route("/products/{productId}/skus", func(r chi.Router) {
+				r.Mount("/", skuHandler.Routes())
+			})
+			r.Mount("/custom-fields", customFieldHandler.Routes())
+
+			// Cart routes — OptionalAuth so both guests and users can access
+			r.Group(func(r chi.Router) {
+				r.Use(auth.OptionalAuth)
+				r.Mount("/cart", cartHandler.Routes())
+			})
+
+			// AI Assistant routes (non-streaming) — requires authentication
+			r.Route("/assistant", func(r chi.Router) {
+				r.Use(auth.RequireAuth)
+				r.Mount("/", assistantHandler.Routes())
+			})
+
+			// Checkout and order routes
+			r.Route("/checkout", func(r chi.Router) {
+				r.Use(checkoutLimiter.Middleware)
+				r.Use(auth.OptionalAuth)
+				r.Mount("/", checkoutHandler.Routes())
+			})
+			r.Route("/orders", func(r chi.Router) {
+				r.Use(auth.OptionalAuth)
+				r.Mount("/", checkoutHandler.OrderRoutes())
+			})
 		})
 
-		// AI Assistant routes — requires authentication
-		r.Route("/assistant", func(r chi.Router) {
+		// SSE streaming route — NO timeout middleware (handler manages its own 2-min context deadline)
+		r.Route("/assistant/stream", func(r chi.Router) {
 			r.Use(auth.RequireAuth)
-			r.Mount("/", assistantHandler.Routes())
-		})
-
-		// Checkout and order routes
-		r.Route("/checkout", func(r chi.Router) {
-			r.Use(checkoutLimiter.Middleware)
-			r.Use(auth.OptionalAuth)
-			r.Mount("/", checkoutHandler.Routes())
-		})
-		r.Route("/orders", func(r chi.Router) {
-			r.Use(auth.OptionalAuth)
-			r.Mount("/", checkoutHandler.OrderRoutes())
+			r.Post("/", assistantHandler.StreamRoute())
 		})
 	})
 
 	// Stripe webhook — outside /api/v1, no auth (uses signature verification)
 	r.Group(func(r chi.Router) {
 		r.Use(webhookLimiter.Middleware)
+		r.Use(middleware.Timeout(cfg.Server.RequestTimeout))
 		r.Mount("/stripe/webhook", checkoutHandler.WebhookRoutes())
 	})
 
