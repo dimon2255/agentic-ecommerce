@@ -24,6 +24,7 @@ func NewHandler(svc Service) *Handler {
 func (h *Handler) Routes() chi.Router {
 	r := chi.NewRouter()
 	r.Post("/", h.Chat)
+	r.Post("/tools", h.ChatWithTools)
 	return r
 }
 
@@ -42,6 +43,29 @@ func (h *Handler) Chat(w http.ResponseWriter, r *http.Request) {
 	}
 
 	resp, err := h.svc.Chat(r.Context(), userID, req)
+	if err != nil {
+		response.ErrorFromAppError(w, r, err)
+		return
+	}
+
+	response.JSON(w, http.StatusOK, resp)
+}
+
+// ChatWithTools handles POST /tools — processes a message using Claude tool use.
+func (h *Handler) ChatWithTools(w http.ResponseWriter, r *http.Request) {
+	userID, ok := middleware.GetUserID(r.Context())
+	if !ok {
+		response.Error(w, http.StatusUnauthorized, "authentication required")
+		return
+	}
+
+	var req ChatRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		response.Error(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	resp, err := h.svc.ChatWithTools(r.Context(), userID, req)
 	if err != nil {
 		response.ErrorFromAppError(w, r, err)
 		return

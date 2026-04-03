@@ -57,7 +57,7 @@ func main() {
 	voyageClient := voyage.NewClient(cfg.Assistant.VoyageAPIKey, cfg.Assistant.EmbeddingModel)
 	anthropicClient := anthropic.NewClient(cfg.Assistant.AnthropicAPIKey, cfg.Assistant.Model)
 	assistantRepo := assistant.NewSupabaseRepository(db)
-	assistantSvc := assistant.NewService(assistantRepo, voyageClient, anthropicClient)
+	assistantSvc := assistant.NewService(assistantRepo, voyageClient, anthropicClient, catalogSvc, cartSvc)
 	assistantHandler := assistant.NewHandler(assistantSvc)
 
 	r := chi.NewRouter()

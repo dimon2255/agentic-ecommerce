@@ -21,8 +21,10 @@ func (r *ChatRequest) Validate() error {
 
 // ChatResponse is the response body for the chat endpoint.
 type ChatResponse struct {
-	SessionID string      `json:"session_id"`
-	Message   ChatMessage `json:"message"`
+	SessionID   string      `json:"session_id"`
+	Message     ChatMessage `json:"message"`
+	CartUpdated bool        `json:"cart_updated,omitempty"`
+	ToolsUsed   []string    `json:"tools_used,omitempty"`
 }
 
 // ChatSession represents a conversation session.
