@@ -132,7 +132,30 @@ export function useAssistant() {
 
       while (true) {
         const { done, value } = await reader.read()
-        if (done) break
+        if (done) {
+          // Process any remaining data in the buffer
+          if (buffer.trim()) {
+            const remaining = buffer.split('\n')
+            let eventType = ''
+            for (const line of remaining) {
+              if (line.startsWith('event: ')) {
+                eventType = line.slice(7)
+              } else if (line.startsWith('data: ') && eventType) {
+                handleSSEEvent(eventType, line.slice(6), placeholderId)
+                if (eventType === 'done') {
+                  try {
+                    const payload = JSON.parse(line.slice(6))
+                    if (payload.cart_updated) cartUpdated = true
+                  } catch {}
+                }
+                eventType = ''
+              }
+            }
+          }
+          // Ensure status is complete even if done event was missed
+          updatePlaceholder(placeholderId, { status: 'complete' })
+          break
+        }
 
         buffer += decoder.decode(value, { stream: true })
         const lines = buffer.split('\n')
