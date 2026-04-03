@@ -93,7 +93,7 @@ All 6 phases complete --> Plan 4: Admin Dashboard
 
 # Plan 6: AI Shopping Assistant — Progress
 
-## Status: Phase 1 Complete — verified end-to-end 2026-04-01
+## Status: Phase 2 In Progress
 
 > Rufus-style conversational AI assistant. Anthropic Claude + Voyage AI embeddings + pgvector RAG.
 > See `.claude/plans/validated-crafting-minsky.md` for the Phase 1 detailed plan file.
@@ -119,7 +119,7 @@ Phase 5: Personalization + Analytics (future/V2)
 | **1** | **1A:** DB Migration + Config | Done | feat/ai-assistant-phase1-db | 2026-04-01 | pgvector, product_embeddings, chat_sessions, chat_messages, match_products RPC, AssistantConfig |
 | **1** | **1B:** Embedding Pipeline + Chat Backend | Done | feat/ai-assistant-phase1-db | 2026-04-01 | Voyage AI client, Anthropic client, internal/assistant/ domain, cmd/embed CLI, wiring in main.go |
 | **1** | **1C:** Frontend Proof of Life | Done | feat/ai-assistant-phase1-db | 2026-04-01 | useAssistant composable, pages/assistant.vue, nav link |
-| **2** | **2A:** Tool Definitions + Execution Loop | Pending | — | — | Claude tools: search_products, compare, get_details, get_cart, add_to_cart |
+| **2** | **2A:** Tool Definitions + Execution Loop | Done | feat/ai-assistant-phase2-tools | 2026-04-02 | PR #14. 5 tools → catalog/cart services, agentic loop (max 5 iter), CompleteWithTools, /tools route, 17 tests |
 | **2** | **2B:** SSE Streaming + Conversation Persistence | Pending | — | — | SSE endpoint, streaming Anthropic response, session history |
 | **3** | **3A:** Slide-over Chat Panel | Pending | — | — | 420px desktop panel, FAB trigger, mobile full-screen overlay |
 | **3** | **3B:** Product Cards + Suggestion Chips | Pending | — | — | Rich product cards in chat, comparison tables, quick-start chips |
