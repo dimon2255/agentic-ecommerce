@@ -130,8 +130,15 @@ func (te *ToolExecutor) getCategories(ctx context.Context, raw json.RawMessage) 
 	return marshalResult(result{Categories: categories})
 }
 
+// assistantSessionID generates a deterministic session ID for cart operations
+// triggered by the assistant. This ensures findOrCreateCart can create a cart
+// when no existing one is found for the user.
+func assistantSessionID(userID string) string {
+	return "assistant-" + userID
+}
+
 func (te *ToolExecutor) getCart(ctx context.Context, userID string) ExecuteResult {
-	cartResp, err := te.cartSvc.GetCart(ctx, userID, "")
+	cartResp, err := te.cartSvc.GetCart(ctx, userID, assistantSessionID(userID))
 	if err != nil {
 		return ExecuteResult{Content: "Failed to get cart: " + err.Error(), IsError: true}
 	}
@@ -149,7 +156,7 @@ func (te *ToolExecutor) addToCart(ctx context.Context, raw json.RawMessage, user
 		qty = 1
 	}
 
-	cartResp, err := te.cartSvc.AddItem(ctx, userID, "", cart.AddItemRequest{
+	cartResp, err := te.cartSvc.AddItem(ctx, userID, assistantSessionID(userID), cart.AddItemRequest{
 		SKUID:    input.SKUID,
 		Quantity: qty,
 	})
