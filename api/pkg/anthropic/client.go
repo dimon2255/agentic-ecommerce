@@ -462,9 +462,11 @@ func parseSSEStream(r io.Reader, cb StreamCallback) (*ToolCompletionResponse, er
 		return nil, fmt.Errorf("anthropic: stream read error: %w", err)
 	}
 
-	// Ensure tool_use blocks have valid Input (Anthropic requires the field even if empty)
+	// Ensure tool_use blocks have valid Input (Anthropic requires the field even if empty).
+	// Input can be nil (no deltas) or empty []byte (delta with empty string) — both get
+	// omitted by omitempty, causing "input: Field required" on the next API call.
 	for i, block := range contentBlocks {
-		if block.Type == "tool_use" && block.Input == nil {
+		if block.Type == "tool_use" && len(block.Input) == 0 {
 			contentBlocks[i].Input = json.RawMessage(`{}`)
 		}
 	}
