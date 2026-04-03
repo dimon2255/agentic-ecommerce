@@ -195,6 +195,10 @@ export function useAssistant() {
       }
     } finally {
       loading.value = false
+      // Final guarantee: force any streaming/thinking message to complete
+      messages.value = messages.value.map(m =>
+        m.status && m.status !== 'complete' ? { ...m, status: 'complete' as const } : m,
+      )
     }
   }
 
