@@ -97,7 +97,7 @@ func AllTools() []anthropic.Tool {
 				"properties": {
 					"sku_id": {
 						"type": "string",
-						"description": "The SKU ID of the product variant to add"
+						"description": "The UUID id of the SKU to add (from the 'id' field in the skus array returned by get_product_details, NOT the sku_code)"
 					},
 					"quantity": {
 						"type": "integer",
