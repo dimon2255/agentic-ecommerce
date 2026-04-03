@@ -67,7 +67,8 @@
 
             <!-- Content (streaming or complete) -->
             <template v-else>
-              <div class="whitespace-pre-wrap" v-text="msg.content" />
+              <div v-if="msg.role === 'user'" class="whitespace-pre-wrap" v-text="msg.content" />
+              <div v-else class="prose-chat" v-html="renderMarkdown(msg.content)" />
               <span v-if="msg.status === 'streaming'" class="inline-block w-1.5 h-4 bg-accent animate-pulse ml-0.5 align-text-bottom" />
             </template>
           </div>
@@ -103,6 +104,15 @@
 </template>
 
 <script setup lang="ts">
+import { marked } from 'marked'
+
+marked.setOptions({ breaks: true, gfm: true })
+
+function renderMarkdown(content: string): string {
+  if (!content) return ''
+  return marked.parse(content) as string
+}
+
 const user = useSupabaseUser()
 const { messages, loading, error, sendMessage, clearChat } = useAssistant()
 const messagesContainer = ref<HTMLElement | null>(null)
@@ -132,3 +142,44 @@ function scrollToBottom() {
 
 watch(messages, () => scrollToBottom(), { deep: true })
 </script>
+
+<style scoped>
+.prose-chat :deep(h1),
+.prose-chat :deep(h2),
+.prose-chat :deep(h3) {
+  font-weight: 700;
+  margin-top: 0.75rem;
+  margin-bottom: 0.25rem;
+  color: var(--text-primary);
+}
+.prose-chat :deep(h2) { font-size: 1.05rem; }
+.prose-chat :deep(h3) { font-size: 0.95rem; }
+.prose-chat :deep(p) { margin: 0.35rem 0; }
+.prose-chat :deep(ul),
+.prose-chat :deep(ol) {
+  margin: 0.25rem 0;
+  padding-left: 1.25rem;
+}
+.prose-chat :deep(li) { margin: 0.15rem 0; }
+.prose-chat :deep(strong) { color: var(--text-primary); }
+.prose-chat :deep(em) { color: var(--text-secondary); }
+.prose-chat :deep(hr) {
+  border-color: var(--border-default);
+  margin: 0.5rem 0;
+}
+.prose-chat :deep(code) {
+  background: var(--surface-elevated);
+  padding: 0.1rem 0.3rem;
+  border-radius: 0.25rem;
+  font-size: 0.85em;
+}
+.prose-chat :deep(img) {
+  max-width: 100%;
+  border-radius: 0.5rem;
+  margin: 0.5rem 0;
+}
+.prose-chat :deep(a) {
+  color: var(--color-accent);
+  text-decoration: underline;
+}
+</style>

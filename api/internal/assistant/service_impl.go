@@ -345,7 +345,12 @@ func (s *assistantService) StreamChat(ctx context.Context, userID string, req Ch
 				Content: toolResults,
 			})
 			// Accumulate any text from this iteration
-			finalText.WriteString(iterationText.String())
+			if iterationText.Len() > 0 {
+				finalText.WriteString(iterationText.String())
+				// Emit a separator so the next iteration's text doesn't run together
+				emitJSON(emit, "delta", map[string]string{"text": "\n\n"})
+				finalText.WriteString("\n\n")
+			}
 			continue
 		}
 
