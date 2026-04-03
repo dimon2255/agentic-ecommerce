@@ -462,6 +462,13 @@ func parseSSEStream(r io.Reader, cb StreamCallback) (*ToolCompletionResponse, er
 		return nil, fmt.Errorf("anthropic: stream read error: %w", err)
 	}
 
+	// Ensure tool_use blocks have valid Input (Anthropic requires the field even if empty)
+	for i, block := range contentBlocks {
+		if block.Type == "tool_use" && block.Input == nil {
+			contentBlocks[i].Input = json.RawMessage(`{}`)
+		}
+	}
+
 	return &ToolCompletionResponse{
 		Content:    contentBlocks,
 		StopReason: stopReason,
