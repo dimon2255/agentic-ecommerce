@@ -332,6 +332,13 @@ func (s *assistantService) StreamChat(ctx context.Context, userID string, req Ch
 				if result.CartUpdated {
 					cartUpdated = true
 				}
+				// Emit structured tool result to frontend for rich rendering
+				if !result.IsError {
+					emitJSON(emit, "tool_result", map[string]any{
+						"tool":   block.Name,
+						"result": json.RawMessage(result.Content),
+					})
+				}
 				toolResults = append(toolResults, anthropic.ToolResultBlock{
 					Type:      "tool_result",
 					ToolUseID: block.ID,

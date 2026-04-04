@@ -1,3 +1,8 @@
+interface ToolResult {
+  tool: string
+  result: any
+}
+
 interface ChatMessage {
   id: string
   role: 'user' | 'assistant'
@@ -5,6 +10,7 @@ interface ChatMessage {
   product_ids: string[]
   created_at: string
   status?: 'streaming' | 'thinking' | 'complete'
+  toolResults?: ToolResult[]
 }
 
 interface ChatResponse {
@@ -231,8 +237,20 @@ export function useAssistant() {
           }
           break
 
+        case 'tool_result': {
+          const current = messages.value.find(m => m.id === placeholderId)
+          if (current) {
+            const existing = current.toolResults || []
+            updatePlaceholder(placeholderId, {
+              toolResults: [...existing, { tool: payload.tool, result: payload.result }],
+            })
+          }
+          break
+        }
+
         case 'done':
           updatePlaceholder(placeholderId, { status: 'complete' })
+          try { useAssistantPanel().markUnread() } catch {}
           break
 
         case 'error':

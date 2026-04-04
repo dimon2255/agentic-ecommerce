@@ -105,7 +105,7 @@ Phase 1: Data Foundation + Proof of Life ✓
     |
 Phase 2: Tool Use + SSE Streaming ✓
     |
-Phase 3: Chat UX + Product Cards
+Phase 3: Chat UX + Product Cards  ← IN PROGRESS
     |
 Phase 4: Auth Guards + Rate Limiting + Polish
     |
@@ -121,9 +121,8 @@ Phase 5: Personalization + Analytics (future/V2)
 | **1** | **1C:** Frontend Proof of Life | Done | feat/ai-assistant-phase1-db | 2026-04-01 | useAssistant composable, pages/assistant.vue, nav link |
 | **2** | **2A:** Tool Definitions + Execution Loop | Done | feat/ai-assistant-phase2-tools | 2026-04-02 | PR #14. 5 tools → catalog/cart services, agentic loop (max 5 iter), CompleteWithTools, /tools route, 17 tests |
 | **2** | **2B:** SSE Streaming + Conversation Persistence | Done | feat/ai-assistant-phase2-tools | 2026-04-02 | PR #14. StreamWithTools, SSE handler, timeout bypass, history helper, frontend fetch+ReadableStream, 29 tests |
-| **3** | **3A:** Slide-over Chat Panel | Pending | — | — | 420px desktop panel, FAB trigger, mobile full-screen overlay |
-| **3** | **3B:** Product Cards + Suggestion Chips | Pending | — | — | Rich product cards in chat, comparison tables, quick-start chips |
-| **3** | **3C:** Mobile + Accessibility | Pending | — | — | Responsive, keyboard nav, aria-live, focus management |
+| **3** | **3A:** Slide-over Panel + FAB | In Progress | feat/ai-assistant-phase3-chat-ux | — | 420px panel, FAB trigger, mobile overlay, focus trap, a11y baked in |
+| **3** | **3B:** Product Cards + Suggestion Chips | Pending | feat/ai-assistant-phase3-chat-ux | — | tool_result SSE event, ChatProductCard, ChatMessage, suggestion chips |
 | **4** | **4A:** Rate Limiting + Cost Tracking | Pending | — | — | Per-user message quotas, Anthropic circuit breaker, tokens_used tracking |
 | **4** | **4B:** Guest Mode + System Prompt Polish | Pending | — | — | Limited guest tools, auth-gated actions, finalized guardrails |
 | **5** | TBD | Pending | — | — | Order history-aware recs, conversation analytics, A/B test prompts |

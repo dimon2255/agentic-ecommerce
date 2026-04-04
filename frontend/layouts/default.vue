@@ -16,13 +16,13 @@
             >
               Catalog
             </NuxtLink>
-            <NuxtLink
-              to="/assistant"
-              :aria-current="route.path === '/assistant' ? 'page' : undefined"
+            <button
+              @click="toggleAssistant"
               class="text-sm font-medium text-secondary hover:text-[var(--text-primary)] transition-colors relative after:absolute after:bottom-[-4px] after:left-0 after:w-0 after:h-[2px] after:bg-accent after:transition-all after:duration-300 hover:after:w-full"
+              :class="{ 'text-accent after:w-full': assistantOpen }"
             >
               Assistant
-            </NuxtLink>
+            </button>
             <NuxtLink
               to="/cart"
               :aria-current="route.path === '/cart' ? 'page' : undefined"
@@ -67,6 +67,8 @@
       <slot />
     </main>
     <Toast />
+    <AssistantPanel />
+    <AssistantFab />
     <footer class="border-t border-[var(--border-default)]">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex items-center justify-between">
         <p class="text-sm text-muted">
@@ -85,6 +87,7 @@ const client = useSupabaseClient()
 const router = useRouter()
 const route = useRoute()
 const { itemCount, refresh } = useCart()
+const { isOpen: assistantOpen, toggle: toggleAssistant } = useAssistantPanel()
 
 onMounted(() => {
   refresh()
