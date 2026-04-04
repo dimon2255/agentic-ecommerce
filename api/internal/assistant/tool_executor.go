@@ -32,7 +32,13 @@ type ExecuteResult struct {
 }
 
 // Execute runs a tool call and returns a JSON result string for Claude.
-func (te *ToolExecutor) Execute(ctx context.Context, block anthropic.ContentBlock, userID string) ExecuteResult {
+// When isGuest is true, cart-related tools are refused as a defense-in-depth measure.
+func (te *ToolExecutor) Execute(ctx context.Context, block anthropic.ContentBlock, userID string, isGuest bool) ExecuteResult {
+	// Defense-in-depth: refuse cart tools for guests even if they somehow appear in the tool list
+	if isGuest && (block.Name == "get_cart" || block.Name == "add_to_cart") {
+		return ExecuteResult{Content: "Please sign in to manage your cart.", IsError: true}
+	}
+
 	switch block.Name {
 	case "search_products":
 		return te.searchProducts(ctx, block.Input)

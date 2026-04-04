@@ -8,6 +8,11 @@ import (
 	"io"
 	"net/http"
 	"time"
+
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/trace"
 )
 
 // Client wraps the Voyage AI embeddings API.
@@ -53,6 +58,12 @@ type apiError struct {
 // Embed generates embeddings for the given texts.
 // Returns one embedding vector (1024 dims for voyage-3-large) per input text.
 func (c *Client) Embed(ctx context.Context, texts []string) ([][]float32, error) {
+	ctx, span := otel.Tracer("voyage").Start(ctx, "voyage.embed",
+		trace.WithAttributes(
+			attribute.String("ai.model", c.model),
+			attribute.Int("ai.input_count", len(texts)),
+		))
+	defer span.End()
 	body, err := json.Marshal(embedRequest{
 		Input: texts,
 		Model: c.model,
@@ -82,7 +93,10 @@ func (c *Client) Embed(ctx context.Context, texts []string) ([][]float32, error)
 	if resp.StatusCode != http.StatusOK {
 		var apiErr apiError
 		json.Unmarshal(respBody, &apiErr)
-		return nil, fmt.Errorf("voyage: API error %d: %s", resp.StatusCode, apiErr.Detail)
+		err := fmt.Errorf("voyage: API error %d: %s", resp.StatusCode, apiErr.Detail)
+		span.RecordError(err)
+		span.SetStatus(codes.Error, fmt.Sprintf("API error %d", resp.StatusCode))
+		return nil, err
 	}
 
 	var result embedResponse

@@ -28,8 +28,22 @@ export function useAssistant() {
   const loading = useState('assistant-loading', () => false)
   const error = useState<string | null>('assistant-error', () => null)
 
+  function getSessionID(): string {
+    if (import.meta.server) return ''
+    let sid = localStorage.getItem('session-id')
+    if (!sid) {
+      sid = crypto.randomUUID()
+      localStorage.setItem('session-id', sid)
+    }
+    return sid
+  }
+
   async function getHeaders(): Promise<Record<string, string>> {
     const headers: Record<string, string> = {}
+
+    // Always include session ID for guest support
+    const sid = getSessionID()
+    if (sid) headers['X-Session-ID'] = sid
 
     // Try reactive session state first
     const authSession = useSupabaseSession()
@@ -45,7 +59,7 @@ export function useAssistant() {
         headers['Authorization'] = `Bearer ${data.session.access_token}`
       }
     } catch {
-      // No auth available
+      // No auth available — will proceed as guest
     }
     return headers
   }

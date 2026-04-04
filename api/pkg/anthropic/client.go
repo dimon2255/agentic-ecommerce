@@ -10,6 +10,11 @@ import (
 	"net/http"
 	"strings"
 	"time"
+
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/trace"
 )
 
 // ---------------------------------------------------------------------------
@@ -63,10 +68,17 @@ type ToolCompletionRequest struct {
 	MaxTokens int           `json:"max_tokens"`
 }
 
+// Usage tracks token consumption from the API response.
+type Usage struct {
+	InputTokens  int `json:"input_tokens"`
+	OutputTokens int `json:"output_tokens"`
+}
+
 // ToolCompletionResponse exposes content blocks and stop_reason.
 type ToolCompletionResponse struct {
 	Content    []ContentBlock `json:"content"`
 	StopReason string         `json:"stop_reason"`
+	Usage      Usage          `json:"usage"`
 }
 
 // TextContent returns concatenated text from all text blocks.
@@ -91,12 +103,20 @@ func (r *ToolCompletionResponse) ToolUseBlocks() []ContentBlock {
 	return blocks
 }
 
+// CircuitBreaker is an interface for circuit breaker implementations.
+type CircuitBreaker interface {
+	Allow() error
+	RecordSuccess()
+	RecordFailure()
+}
+
 // Client wraps the Anthropic Messages API.
 type Client struct {
 	apiKey     string
 	model      string
 	baseURL    string
 	httpClient *http.Client
+	cb         CircuitBreaker
 }
 
 // NewClient creates an Anthropic client for chat completions.
@@ -109,6 +129,11 @@ func NewClient(apiKey, model string) *Client {
 			Timeout: 60 * time.Second,
 		},
 	}
+}
+
+// SetCircuitBreaker attaches a circuit breaker to the client.
+func (c *Client) SetCircuitBreaker(cb CircuitBreaker) {
+	c.cb = cb
 }
 
 // Message represents a single message in a conversation.
@@ -220,12 +245,28 @@ type toolMessagesRequest struct {
 type toolMessagesResponse struct {
 	Content    []ContentBlock `json:"content"`
 	StopReason string         `json:"stop_reason"`
+	Usage      Usage          `json:"usage"`
 }
 
 // CompleteWithTools sends a chat completion that may include tool definitions.
 // Unlike Complete, it returns the full response including stop_reason and all
 // content block types (text + tool_use).
 func (c *Client) CompleteWithTools(ctx context.Context, req ToolCompletionRequest) (*ToolCompletionResponse, error) {
+	ctx, span := otel.Tracer("anthropic").Start(ctx, "anthropic.messages.create",
+		trace.WithAttributes(
+			attribute.String("ai.model", c.model),
+			attribute.Int("ai.max_tokens", req.MaxTokens),
+			attribute.String("ai.request_type", "complete"),
+		))
+	defer span.End()
+
+	if c.cb != nil {
+		if err := c.cb.Allow(); err != nil {
+			span.SetStatus(codes.Error, "circuit breaker open")
+			return nil, fmt.Errorf("anthropic: %w", err)
+		}
+	}
+
 	if req.MaxTokens == 0 {
 		req.MaxTokens = 2048
 	}
@@ -251,30 +292,61 @@ func (c *Client) CompleteWithTools(ctx context.Context, req ToolCompletionReques
 
 	resp, err := c.httpClient.Do(httpReq)
 	if err != nil {
+		c.recordFailure()
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "send request failed")
 		return nil, fmt.Errorf("anthropic: send request: %w", err)
 	}
 	defer resp.Body.Close()
 
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
+		c.recordFailure()
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "read response failed")
 		return nil, fmt.Errorf("anthropic: read response: %w", err)
 	}
 
 	if resp.StatusCode != http.StatusOK {
+		c.recordFailure()
 		var apiErr apiError
 		json.Unmarshal(respBody, &apiErr)
-		return nil, fmt.Errorf("anthropic: API error %d: %s - %s", resp.StatusCode, apiErr.Error.Type, apiErr.Error.Message)
+		apiError := fmt.Errorf("anthropic: API error %d: %s - %s", resp.StatusCode, apiErr.Error.Type, apiErr.Error.Message)
+		span.RecordError(apiError)
+		span.SetStatus(codes.Error, fmt.Sprintf("API error %d", resp.StatusCode))
+		return nil, apiError
 	}
+
+	c.recordSuccess()
 
 	var result toolMessagesResponse
 	if err := json.Unmarshal(respBody, &result); err != nil {
 		return nil, fmt.Errorf("anthropic: unmarshal response: %w", err)
 	}
 
+	span.SetAttributes(
+		attribute.Int("ai.tokens.input", result.Usage.InputTokens),
+		attribute.Int("ai.tokens.output", result.Usage.OutputTokens),
+		attribute.String("ai.stop_reason", result.StopReason),
+	)
+
 	return &ToolCompletionResponse{
 		Content:    result.Content,
 		StopReason: result.StopReason,
+		Usage:      result.Usage,
 	}, nil
+}
+
+func (c *Client) recordSuccess() {
+	if c.cb != nil {
+		c.cb.RecordSuccess()
+	}
+}
+
+func (c *Client) recordFailure() {
+	if c.cb != nil {
+		c.cb.RecordFailure()
+	}
 }
 
 // ---------------------------------------------------------------------------
@@ -312,6 +384,21 @@ type streamRequest struct {
 // StreamWithTools sends a streaming chat completion with tool support.
 // The callback is invoked for each SSE event. Returns the final accumulated response.
 func (c *Client) StreamWithTools(ctx context.Context, req ToolCompletionRequest, cb StreamCallback) (*ToolCompletionResponse, error) {
+	ctx, span := otel.Tracer("anthropic").Start(ctx, "anthropic.messages.stream",
+		trace.WithAttributes(
+			attribute.String("ai.model", c.model),
+			attribute.Int("ai.max_tokens", req.MaxTokens),
+			attribute.String("ai.request_type", "stream"),
+		))
+	defer span.End()
+
+	if c.cb != nil {
+		if err := c.cb.Allow(); err != nil {
+			span.SetStatus(codes.Error, "circuit breaker open")
+			return nil, fmt.Errorf("anthropic: %w", err)
+		}
+	}
+
 	if req.MaxTokens == 0 {
 		req.MaxTokens = 2048
 	}
@@ -341,18 +428,32 @@ func (c *Client) StreamWithTools(ctx context.Context, req ToolCompletionRequest,
 
 	resp, err := streamClient.Do(httpReq)
 	if err != nil {
+		c.recordFailure()
 		return nil, fmt.Errorf("anthropic: send request: %w", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
+		c.recordFailure()
 		respBody, _ := io.ReadAll(resp.Body)
 		var apiErr apiError
 		json.Unmarshal(respBody, &apiErr)
 		return nil, fmt.Errorf("anthropic: API error %d: %s - %s", resp.StatusCode, apiErr.Error.Type, apiErr.Error.Message)
 	}
 
-	return parseSSEStream(resp.Body, cb)
+	c.recordSuccess()
+	result, parseErr := parseSSEStream(resp.Body, cb)
+	if parseErr != nil {
+		span.RecordError(parseErr)
+		span.SetStatus(codes.Error, "stream parse error")
+		return nil, parseErr
+	}
+	span.SetAttributes(
+		attribute.Int("ai.tokens.input", result.Usage.InputTokens),
+		attribute.Int("ai.tokens.output", result.Usage.OutputTokens),
+		attribute.String("ai.stop_reason", result.StopReason),
+	)
+	return result, nil
 }
 
 // parseSSEStream reads Anthropic SSE events and accumulates the final response.
@@ -364,6 +465,7 @@ func parseSSEStream(r io.Reader, cb StreamCallback) (*ToolCompletionResponse, er
 	var eventType string
 	var contentBlocks []ContentBlock
 	var stopReason string
+	var usage Usage
 
 	for scanner.Scan() {
 		line := scanner.Text()
@@ -441,17 +543,31 @@ func parseSSEStream(r io.Reader, cb StreamCallback) (*ToolCompletionResponse, er
 				Delta struct {
 					StopReason string `json:"stop_reason"`
 				} `json:"delta"`
+				Usage struct {
+					OutputTokens int `json:"output_tokens"`
+				} `json:"usage"`
 			}
 			if err := json.Unmarshal([]byte(data), &payload); err != nil {
 				continue
 			}
 			stopReason = payload.Delta.StopReason
+			usage.OutputTokens += payload.Usage.OutputTokens
 			cb(StreamEvent{Type: "message_delta", StopReason: stopReason})
 
 		case "message_stop":
 			cb(StreamEvent{Type: "message_stop"})
 
-		case "ping", "message_start":
+		case "message_start":
+			var payload struct {
+				Message struct {
+					Usage Usage `json:"usage"`
+				} `json:"message"`
+			}
+			if err := json.Unmarshal([]byte(data), &payload); err == nil {
+				usage.InputTokens += payload.Message.Usage.InputTokens
+			}
+
+		case "ping":
 			// Ignored
 		}
 
@@ -474,5 +590,6 @@ func parseSSEStream(r io.Reader, cb StreamCallback) (*ToolCompletionResponse, er
 	return &ToolCompletionResponse{
 		Content:    contentBlocks,
 		StopReason: stopReason,
+		Usage:      usage,
 	}, nil
 }

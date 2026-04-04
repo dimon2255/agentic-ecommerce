@@ -1,9 +1,13 @@
 package main
 
 import (
+	"context"
 	"fmt"
-	"log"
+	"log/slog"
 	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -18,16 +22,40 @@ import (
 	"github.com/dimon2255/agentic-ecommerce/api/internal/middleware"
 	"github.com/dimon2255/agentic-ecommerce/api/internal/requestid"
 	"github.com/dimon2255/agentic-ecommerce/api/pkg/anthropic"
+	"github.com/dimon2255/agentic-ecommerce/api/pkg/circuitbreaker"
 	stripeClient "github.com/dimon2255/agentic-ecommerce/api/pkg/stripe"
 	"github.com/dimon2255/agentic-ecommerce/api/pkg/supabase"
+	"github.com/dimon2255/agentic-ecommerce/api/pkg/telemetry"
 	"github.com/dimon2255/agentic-ecommerce/api/pkg/voyage"
+
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
 
 func main() {
+	// Bootstrap JSON logger (replaced with trace-aware handler after telemetry init)
+	jsonHandler := slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo})
+	slog.SetDefault(slog.New(jsonHandler))
+
 	cfg, err := config.Load()
 	if err != nil {
-		log.Fatal(err)
+		slog.Error("failed to load config", "error", err)
+		os.Exit(1)
 	}
+
+	// Initialize OpenTelemetry (no-op when telemetry.otlp_endpoint is empty)
+	ctx := context.Background()
+	telemetryShutdown, err := telemetry.Init(ctx, telemetry.Config{
+		ServiceName:  cfg.Telemetry.ServiceName,
+		OTLPEndpoint: cfg.Telemetry.OTLPEndpoint,
+	})
+	if err != nil {
+		slog.Error("failed to init telemetry", "error", err)
+		os.Exit(1)
+	}
+	defer telemetryShutdown(ctx)
+
+	// Upgrade to trace-aware slog handler (injects trace_id/span_id into log records)
+	slog.SetDefault(slog.New(telemetry.NewTracedHandler(jsonHandler)))
 
 	db := supabase.NewClient(cfg.Supabase.URL, cfg.Supabase.ServiceRoleKey, cfg.Supabase.Timeout)
 	auth := middleware.NewAuthMiddleware(cfg.Supabase.JWTSecret, cfg.Supabase.JWTIssuer, cfg.Supabase.JWTAudience, cfg.Supabase.URL)
@@ -37,6 +65,12 @@ func main() {
 	checkoutLimiter := middleware.NewRateLimiter(20, time.Minute)
 	webhookLimiter := middleware.NewRateLimiter(50, time.Minute)
 	webhookReplay := middleware.NewWebhookReplayGuard(10000)
+	assistantLimiter := middleware.NewAssistantRateLimiter(
+		cfg.Assistant.RateLimit.UserMessagesPerHour,
+		cfg.Assistant.RateLimit.UserBurstPerMinute,
+		cfg.Assistant.RateLimit.GuestMessagesPerHour,
+		cfg.Assistant.RateLimit.GuestBurstPerMinute,
+	)
 
 	catalogRepo := catalog.NewSupabaseRepository(db)
 	catalogSvc := catalog.NewService(catalogRepo)
@@ -56,13 +90,23 @@ func main() {
 	// AI Shopping Assistant
 	voyageClient := voyage.NewClient(cfg.Assistant.VoyageAPIKey, cfg.Assistant.EmbeddingModel)
 	anthropicClient := anthropic.NewClient(cfg.Assistant.AnthropicAPIKey, cfg.Assistant.Model)
+	cb := circuitbreaker.New(
+		cfg.Assistant.Cost.CircuitBreakerThreshold,
+		cfg.Assistant.Cost.CircuitBreakerWindow,
+		cfg.Assistant.Cost.CircuitBreakerOpenDur,
+	)
+	anthropicClient.SetCircuitBreaker(cb)
 	assistantRepo := assistant.NewSupabaseRepository(db)
-	assistantSvc := assistant.NewService(assistantRepo, voyageClient, anthropicClient, catalogSvc, cartSvc)
+	assistantSvc := assistant.NewService(assistantRepo, voyageClient, anthropicClient, catalogSvc, cartSvc, assistant.ServiceConfig{
+		Model:            cfg.Assistant.Model,
+		DailyBudgetCents: cfg.Assistant.Cost.DailyBudgetCents,
+	})
 	assistantHandler := assistant.NewHandler(assistantSvc)
 
 	r := chi.NewRouter()
 
 	r.Use(requestid.Middleware)
+	r.Use(otelhttp.NewMiddleware("eshop-api"))
 	r.Use(chimiddleware.Logger)
 	r.Use(chimiddleware.Recoverer)
 	r.Use(middleware.SecurityHeaders)
@@ -106,9 +150,10 @@ func main() {
 				r.Mount("/cart", cartHandler.Routes())
 			})
 
-			// AI Assistant routes (non-streaming) — requires authentication
+			// AI Assistant routes (non-streaming) — supports guests with limited tools
 			r.Route("/assistant", func(r chi.Router) {
-				r.Use(auth.RequireAuth)
+				r.Use(auth.OptionalAuth)
+				r.Use(assistantLimiter.Middleware)
 				r.Mount("/", assistantHandler.Routes())
 			})
 
@@ -126,7 +171,8 @@ func main() {
 
 		// SSE streaming route — NO timeout middleware (handler manages its own 2-min context deadline)
 		r.Route("/assistant/stream", func(r chi.Router) {
-			r.Use(auth.RequireAuth)
+			r.Use(auth.OptionalAuth)
+			r.Use(assistantLimiter.Middleware)
 			r.Post("/", assistantHandler.StreamRoute())
 		})
 	})
@@ -139,6 +185,26 @@ func main() {
 	})
 
 	addr := fmt.Sprintf(":%d", cfg.Server.Port)
-	fmt.Printf("API server listening on %s\n", addr)
-	log.Fatal(http.ListenAndServe(addr, r))
+	srv := &http.Server{Addr: addr, Handler: r}
+
+	// Graceful shutdown on SIGTERM/SIGINT
+	go func() {
+		sigCh := make(chan os.Signal, 1)
+		signal.Notify(sigCh, syscall.SIGTERM, syscall.SIGINT)
+		sig := <-sigCh
+		slog.Info("received signal, shutting down", "signal", sig)
+
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		if err := srv.Shutdown(shutdownCtx); err != nil {
+			slog.Error("server shutdown error", "error", err)
+		}
+	}()
+
+	slog.Info("API server listening", "addr", addr)
+	if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		slog.Error("server exited", "error", err)
+		os.Exit(1)
+	}
+	slog.Info("server stopped gracefully")
 }

@@ -122,3 +122,15 @@ func (e *InternalError) Code() string        { return "INTERNAL_ERROR" }
 func (e *InternalError) Message() string     { return e.Msg }
 func (e *InternalError) HTTPStatus() int     { return http.StatusInternalServerError }
 func (e *InternalError) Unwrap() error       { return e.Err }
+
+// ServiceUnavailableError — 503.
+type ServiceUnavailableError struct{ Msg string }
+
+func NewServiceUnavailable(msg string) *ServiceUnavailableError {
+	return &ServiceUnavailableError{Msg: msg}
+}
+
+func (e *ServiceUnavailableError) Error() string      { return e.Msg }
+func (e *ServiceUnavailableError) Code() string        { return "SERVICE_UNAVAILABLE" }
+func (e *ServiceUnavailableError) Message() string     { return e.Msg }
+func (e *ServiceUnavailableError) HTTPStatus() int     { return http.StatusServiceUnavailable }

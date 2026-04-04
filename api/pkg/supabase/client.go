@@ -2,15 +2,21 @@ package supabase
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
 	"time"
+
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/trace"
 )
 
 type Client struct {
@@ -137,6 +143,18 @@ func (q *QueryBuilder) Delete() *QueryBuilder {
 }
 
 func (q *QueryBuilder) Execute(result any) error {
+	return q.ExecuteContext(context.Background(), result)
+}
+
+func (q *QueryBuilder) ExecuteContext(ctx context.Context, result any) error {
+	_, span := otel.Tracer("supabase").Start(ctx, "supabase.postgrest",
+		trace.WithAttributes(
+			attribute.String("db.table", q.table),
+			attribute.String("db.operation", q.method),
+		),
+	)
+	defer span.End()
+
 	reqURL := fmt.Sprintf("%s/rest/v1/%s", q.client.baseURL, q.table)
 	if len(q.params) > 0 {
 		reqURL += "?" + q.params.Encode()
@@ -151,7 +169,7 @@ func (q *QueryBuilder) Execute(result any) error {
 		bodyReader = bytes.NewReader(jsonBody)
 	}
 
-	req, err := http.NewRequest(q.method, reqURL, bodyReader)
+	req, err := http.NewRequestWithContext(ctx, q.method, reqURL, bodyReader)
 	if err != nil {
 		return fmt.Errorf("create request: %w", err)
 	}
@@ -175,9 +193,14 @@ func (q *QueryBuilder) Execute(result any) error {
 		return fmt.Errorf("read response: %w", err)
 	}
 
+	span.SetAttributes(attribute.Int("http.status_code", resp.StatusCode))
+
 	if resp.StatusCode >= 400 {
-		log.Printf("supabase error (status %d): %s", resp.StatusCode, string(respBody))
-		return fmt.Errorf("supabase request failed (status %d)", resp.StatusCode)
+		slog.Error("supabase request failed", "status", resp.StatusCode, "body", string(respBody))
+		err := fmt.Errorf("supabase request failed (status %d)", resp.StatusCode)
+		span.RecordError(err)
+		span.SetStatus(codes.Error, fmt.Sprintf("status %d", resp.StatusCode))
+		return err
 	}
 
 	if result != nil && len(respBody) > 0 {
@@ -264,6 +287,14 @@ func lastIndexByte(s string, c byte) int {
 }
 
 func (c *Client) RPC(functionName string, params any, result any) error {
+	_, span := otel.Tracer("supabase").Start(context.Background(), "supabase.rpc",
+		trace.WithAttributes(
+			attribute.String("db.operation", "rpc"),
+			attribute.String("db.function", functionName),
+		),
+	)
+	defer span.End()
+
 	reqURL := fmt.Sprintf("%s/rest/v1/rpc/%s", c.baseURL, functionName)
 
 	var bodyReader io.Reader

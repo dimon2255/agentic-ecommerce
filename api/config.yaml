@@ -14,3 +14,19 @@ cors:
 checkout:
   payment_currency: usd
   webhook_max_body_size: 65536
+
+assistant:
+  rate_limit:
+    user_messages_per_hour: 20
+    user_burst_per_minute: 5
+    guest_messages_per_hour: 5
+    guest_burst_per_minute: 2
+  cost:
+    daily_budget_cents: 5000
+    circuit_breaker_threshold: 3
+    circuit_breaker_window: 30s
+    circuit_breaker_open_duration: 60s
+
+telemetry:
+  service_name: eshop-api
+  otlp_endpoint: ""

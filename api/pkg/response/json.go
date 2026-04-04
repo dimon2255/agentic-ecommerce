@@ -2,7 +2,7 @@ package response
 
 import (
 	"encoding/json"
-	"log"
+	"log/slog"
 	"net/http"
 
 	"github.com/dimon2255/agentic-ecommerce/api/internal/apperror"
@@ -35,7 +35,7 @@ func ErrorFromAppError(w http.ResponseWriter, r *http.Request, err error) {
 
 	appErr, ok := apperror.As(err)
 	if !ok {
-		log.Printf("[%s] unhandled error: %v", requestID, err)
+		slog.Error("unhandled error", "request_id", requestID, "error", err)
 		JSON(w, http.StatusInternalServerError, errorEnvelope{
 			Error: errorBody{
 				Code:      "INTERNAL_ERROR",
@@ -48,7 +48,7 @@ func ErrorFromAppError(w http.ResponseWriter, r *http.Request, err error) {
 
 	// Log internal errors server-side with full detail
 	if ie, ok := err.(*apperror.InternalError); ok {
-		log.Printf("[%s] internal error: %v", requestID, ie.Error())
+		slog.Error("internal error", "request_id", requestID, "error", ie.Error())
 	}
 
 	body := errorEnvelope{

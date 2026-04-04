@@ -41,7 +41,7 @@ func TestExecute_SearchProducts(t *testing.T) {
 	result := te.Execute(context.Background(), anthropic.ContentBlock{
 		Name:  "search_products",
 		Input: json.RawMessage(`{"query":"laptop","limit":5}`),
-	}, "user-1")
+	}, "user-1", false)
 
 	if result.IsError {
 		t.Fatalf("unexpected error: %s", result.Content)
@@ -59,7 +59,7 @@ func TestExecute_GetProductDetails(t *testing.T) {
 	result := te.Execute(context.Background(), anthropic.ContentBlock{
 		Name:  "get_product_details",
 		Input: json.RawMessage(`{"slug":"probook-15"}`),
-	}, "user-1")
+	}, "user-1", false)
 
 	if result.IsError {
 		t.Fatalf("unexpected error: %s", result.Content)
@@ -77,7 +77,7 @@ func TestExecute_GetProductDetails_NotFound(t *testing.T) {
 	result := te.Execute(context.Background(), anthropic.ContentBlock{
 		Name:  "get_product_details",
 		Input: json.RawMessage(`{"slug":"nonexistent"}`),
-	}, "user-1")
+	}, "user-1", false)
 
 	if !result.IsError {
 		t.Error("expected error for nonexistent product")
@@ -92,7 +92,7 @@ func TestExecute_GetCategories(t *testing.T) {
 	result := te.Execute(context.Background(), anthropic.ContentBlock{
 		Name:  "get_categories",
 		Input: json.RawMessage(`{}`),
-	}, "user-1")
+	}, "user-1", false)
 
 	if result.IsError {
 		t.Fatalf("unexpected error: %s", result.Content)
@@ -107,7 +107,7 @@ func TestExecute_GetCart(t *testing.T) {
 	result := te.Execute(context.Background(), anthropic.ContentBlock{
 		Name:  "get_cart",
 		Input: json.RawMessage(`{}`),
-	}, "user-1")
+	}, "user-1", false)
 
 	if result.IsError {
 		t.Fatalf("unexpected error: %s", result.Content)
@@ -125,7 +125,7 @@ func TestExecute_AddToCart(t *testing.T) {
 	result := te.Execute(context.Background(), anthropic.ContentBlock{
 		Name:  "add_to_cart",
 		Input: json.RawMessage(`{"sku_id":"s1","quantity":1}`),
-	}, "user-1")
+	}, "user-1", false)
 
 	if result.IsError {
 		t.Fatalf("unexpected error: %s", result.Content)
@@ -140,7 +140,7 @@ func TestExecute_UnknownTool(t *testing.T) {
 	result := te.Execute(context.Background(), anthropic.ContentBlock{
 		Name:  "hack_the_planet",
 		Input: json.RawMessage(`{}`),
-	}, "user-1")
+	}, "user-1", false)
 
 	if !result.IsError {
 		t.Error("expected error for unknown tool")
@@ -155,7 +155,7 @@ func TestExecute_InvalidInput(t *testing.T) {
 	result := te.Execute(context.Background(), anthropic.ContentBlock{
 		Name:  "search_products",
 		Input: json.RawMessage(`{invalid json`),
-	}, "user-1")
+	}, "user-1", false)
 
 	if !result.IsError {
 		t.Error("expected error for invalid JSON input")

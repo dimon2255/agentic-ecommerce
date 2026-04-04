@@ -27,6 +27,19 @@ type AddToCartInput struct {
 	Quantity int    `json:"quantity"`
 }
 
+// GuestTools returns the subset of tools available to unauthenticated users.
+// Guests can browse products but cannot access cart functionality.
+func GuestTools() []anthropic.Tool {
+	all := AllTools()
+	guest := make([]anthropic.Tool, 0, 3)
+	for _, t := range all {
+		if t.Name == "search_products" || t.Name == "get_product_details" || t.Name == "get_categories" {
+			guest = append(guest, t)
+		}
+	}
+	return guest
+}
+
 // AllTools returns the tool definitions for the AI assistant.
 func AllTools() []anthropic.Tool {
 	return []anthropic.Tool{
