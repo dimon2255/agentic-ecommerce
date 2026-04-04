@@ -5,7 +5,7 @@ import (
 	_ "embed"
 	"encoding/json"
 	"fmt"
-	"log"
+	"log/slog"
 	"strings"
 
 	"github.com/dimon2255/agentic-ecommerce/api/internal/apperror"
@@ -25,20 +25,33 @@ const maxToolIterations = 5
 const maxHistoryMessages = 20
 
 type assistantService struct {
-	repo         Repository
-	voyage       *voyage.Client
-	anthropic    *anthropic.Client
-	toolExecutor *ToolExecutor
+	repo            Repository
+	voyage          *voyage.Client
+	anthropic       *anthropic.Client
+	toolExecutor    *ToolExecutor
+	model           string
+	dailyBudgetCents int
+}
+
+// ServiceConfig holds optional configuration for the assistant service.
+type ServiceConfig struct {
+	Model            string
+	DailyBudgetCents int
 }
 
 // NewService creates an assistant service with the given dependencies.
-func NewService(repo Repository, voyageClient *voyage.Client, anthropicClient *anthropic.Client, catalogSvc catalog.Service, cartSvc cart.Service) Service {
-	return &assistantService{
+func NewService(repo Repository, voyageClient *voyage.Client, anthropicClient *anthropic.Client, catalogSvc catalog.Service, cartSvc cart.Service, cfgs ...ServiceConfig) Service {
+	svc := &assistantService{
 		repo:         repo,
 		voyage:       voyageClient,
 		anthropic:    anthropicClient,
 		toolExecutor: NewToolExecutor(catalogSvc, cartSvc),
 	}
+	if len(cfgs) > 0 {
+		svc.model = cfgs[0].Model
+		svc.dailyBudgetCents = cfgs[0].DailyBudgetCents
+	}
+	return svc
 }
 
 func (s *assistantService) Chat(ctx context.Context, userID string, req ChatRequest) (*ChatResponse, error) {
@@ -69,7 +82,7 @@ func (s *assistantService) Chat(ctx context.Context, userID string, req ChatRequ
 	// Embed user query for semantic search
 	embeddings, err := s.voyage.Embed(ctx, []string{req.Message})
 	if err != nil {
-		log.Printf("[assistant] Voyage embed error: %v", err)
+		slog.ErrorContext(ctx, "Voyage embed error", "error", err)
 		return nil, apperror.NewInternal("failed to embed query", err)
 	}
 	if len(embeddings) == 0 {
@@ -94,7 +107,7 @@ func (s *assistantService) Chat(ctx context.Context, userID string, req ChatRequ
 		MaxTokens: 1024,
 	})
 	if err != nil {
-		log.Printf("[assistant] Anthropic API error: %v", err)
+		slog.ErrorContext(ctx, "Anthropic API error", "error", err)
 		return nil, apperror.NewInternal("failed to generate response", err)
 	}
 
@@ -116,8 +129,13 @@ func (s *assistantService) Chat(ctx context.Context, userID string, req ChatRequ
 	}, nil
 }
 
-func (s *assistantService) ChatWithTools(ctx context.Context, userID string, req ChatRequest) (*ChatResponse, error) {
+func (s *assistantService) ChatWithTools(ctx context.Context, userID string, isGuest bool, req ChatRequest) (*ChatResponse, error) {
 	if err := req.Validate(); err != nil {
+		return nil, err
+	}
+
+	// Check daily budget
+	if err := s.checkDailyBudget(ctx); err != nil {
 		return nil, err
 	}
 
@@ -149,9 +167,13 @@ func (s *assistantService) ChatWithTools(ctx context.Context, userID string, req
 
 	// Agentic tool loop
 	tools := AllTools()
+	if isGuest {
+		tools = GuestTools()
+	}
 	var cartUpdated bool
 	toolsUsed := make(map[string]bool)
 	var finalText string
+	var totalInputTokens, totalOutputTokens int
 
 	for i := range maxToolIterations {
 		resp, err := s.anthropic.CompleteWithTools(ctx, anthropic.ToolCompletionRequest{
@@ -161,9 +183,12 @@ func (s *assistantService) ChatWithTools(ctx context.Context, userID string, req
 			MaxTokens: 2048,
 		})
 		if err != nil {
-			log.Printf("[assistant] Anthropic API error (iteration %d): %v", i, err)
+			slog.ErrorContext(ctx, "Anthropic API error", "iteration", i, "error", err)
 			return nil, apperror.NewInternal("failed to generate response", err)
 		}
+
+		totalInputTokens += resp.Usage.InputTokens
+		totalOutputTokens += resp.Usage.OutputTokens
 
 		// If Claude is done talking, extract text and break
 		if resp.StopReason == "end_turn" || resp.StopReason == "max_tokens" {
@@ -183,7 +208,7 @@ func (s *assistantService) ChatWithTools(ctx context.Context, userID string, req
 			var toolResults []anthropic.ToolResultBlock
 			for _, block := range resp.ToolUseBlocks() {
 				toolsUsed[block.Name] = true
-				result := s.toolExecutor.Execute(ctx, block, userID)
+				result := s.toolExecutor.Execute(ctx, block, userID, isGuest)
 				if result.CartUpdated {
 					cartUpdated = true
 				}
@@ -212,6 +237,9 @@ func (s *assistantService) ChatWithTools(ctx context.Context, userID string, req
 		finalText = "I'm sorry, I wasn't able to complete my research. Could you try rephrasing your question?"
 	}
 
+	// Persist token usage
+	s.saveTokenUsage(ctx, sessionID, totalInputTokens, totalOutputTokens)
+
 	// Save final assistant response
 	usedToolNames := make([]string, 0, len(toolsUsed))
 	for name := range toolsUsed {
@@ -235,7 +263,7 @@ func (s *assistantService) ChatWithTools(ctx context.Context, userID string, req
 func (s *assistantService) loadConversationMessages(ctx context.Context, sessionID, currentMessage string) ([]anthropic.RichMessage, error) {
 	history, err := s.repo.GetSessionMessages(ctx, sessionID)
 	if err != nil {
-		log.Printf("[assistant] Failed to load history: %v", err)
+		slog.ErrorContext(ctx, "failed to load history", "error", err)
 		return []anthropic.RichMessage{
 			{Role: "user", Content: currentMessage},
 		}, nil
@@ -243,8 +271,13 @@ func (s *assistantService) loadConversationMessages(ctx context.Context, session
 	return buildConversationMessages(history, currentMessage, maxHistoryMessages), nil
 }
 
-func (s *assistantService) StreamChat(ctx context.Context, userID string, req ChatRequest, emit func(event, data string)) error {
+func (s *assistantService) StreamChat(ctx context.Context, userID string, isGuest bool, req ChatRequest, emit func(event, data string)) error {
 	if err := req.Validate(); err != nil {
+		return err
+	}
+
+	// Check daily budget before proceeding
+	if err := s.checkDailyBudget(ctx); err != nil {
 		return err
 	}
 
@@ -279,9 +312,13 @@ func (s *assistantService) StreamChat(ctx context.Context, userID string, req Ch
 
 	// Streaming agentic tool loop
 	tools := AllTools()
+	if isGuest {
+		tools = GuestTools()
+	}
 	var cartUpdated bool
 	toolsUsed := make(map[string]bool)
 	var finalText strings.Builder
+	var totalInputTokens, totalOutputTokens int
 
 	for i := range maxToolIterations {
 		var iterationText strings.Builder
@@ -305,9 +342,13 @@ func (s *assistantService) StreamChat(ctx context.Context, userID string, req Ch
 			}
 		})
 		if err != nil {
-			log.Printf("[assistant] Anthropic streaming error (iteration %d): %v", i, err)
+			slog.ErrorContext(ctx, "Anthropic streaming error", "iteration", i, "error", err)
 			return apperror.NewInternal("failed to generate response", err)
 		}
+
+		// Accumulate token usage across iterations
+		totalInputTokens += resp.Usage.InputTokens
+		totalOutputTokens += resp.Usage.OutputTokens
 
 		// If Claude is done — break
 		if resp.StopReason == "end_turn" || resp.StopReason == "max_tokens" {
@@ -328,7 +369,7 @@ func (s *assistantService) StreamChat(ctx context.Context, userID string, req Ch
 			var toolResults []anthropic.ToolResultBlock
 			for _, block := range resp.ToolUseBlocks() {
 				toolsUsed[block.Name] = true
-				result := s.toolExecutor.Execute(ctx, block, userID)
+				result := s.toolExecutor.Execute(ctx, block, userID, isGuest)
 				if result.CartUpdated {
 					cartUpdated = true
 				}
@@ -374,8 +415,11 @@ func (s *assistantService) StreamChat(ctx context.Context, userID string, req Ch
 	// Save final assistant response
 	_, err = s.repo.SaveMessage(ctx, sessionID, "assistant", text, nil)
 	if err != nil {
-		log.Printf("[assistant] Failed to save streamed response: %v", err)
+		slog.ErrorContext(ctx, "failed to save streamed response", "error", err)
 	}
+
+	// Persist token usage for cost tracking
+	s.saveTokenUsage(ctx, sessionID, totalInputTokens, totalOutputTokens)
 
 	// Emit done event
 	usedToolNames := make([]string, 0, len(toolsUsed))
@@ -394,6 +438,45 @@ func (s *assistantService) StreamChat(ctx context.Context, userID string, req Ch
 func emitJSON(emit func(event, data string), event string, data any) {
 	b, _ := json.Marshal(data)
 	emit(event, string(b))
+}
+
+// checkDailyBudget returns an error if the daily token budget has been exceeded.
+// Approximate: 1 cent ≈ 1000 tokens (rough average across input/output pricing).
+func (s *assistantService) checkDailyBudget(ctx context.Context) error {
+	if s.dailyBudgetCents <= 0 {
+		return nil // no budget configured
+	}
+	usage, err := s.repo.GetDailyTokenUsage(ctx)
+	if err != nil {
+		slog.ErrorContext(ctx, "failed to check daily budget", "error", err)
+		return nil // fail open — don't block on budget check failure
+	}
+	totalTokens := usage.TotalInputTokens + usage.TotalOutputTokens
+	// Rough approximation: $0.01 per 1000 tokens
+	estimatedCents := totalTokens / 1000
+	if estimatedCents >= int64(s.dailyBudgetCents) {
+		return apperror.NewServiceUnavailable("assistant is temporarily unavailable due to high demand")
+	}
+	return nil
+}
+
+// saveTokenUsage persists accumulated token usage after a conversation turn.
+func (s *assistantService) saveTokenUsage(ctx context.Context, sessionID string, inputTokens, outputTokens int) {
+	if inputTokens == 0 && outputTokens == 0 {
+		return
+	}
+	model := s.model
+	if model == "" {
+		model = "unknown"
+	}
+	if err := s.repo.SaveTokenUsage(ctx, TokenUsageRecord{
+		SessionID:    sessionID,
+		InputTokens:  inputTokens,
+		OutputTokens: outputTokens,
+		Model:        model,
+	}); err != nil {
+		slog.ErrorContext(ctx, "failed to save token usage", "error", err)
+	}
 }
 
 func buildSystemPrompt(matches []ProductMatch) string {

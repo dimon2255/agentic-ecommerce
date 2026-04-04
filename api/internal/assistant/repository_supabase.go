@@ -100,6 +100,27 @@ func (r *supabaseRepository) UpsertEmbedding(_ context.Context, record Embedding
 	}).Execute(nil)
 }
 
+func (r *supabaseRepository) SaveTokenUsage(_ context.Context, usage TokenUsageRecord) error {
+	return r.db.From("chat_token_usage").Insert(map[string]any{
+		"session_id":    usage.SessionID,
+		"input_tokens":  usage.InputTokens,
+		"output_tokens": usage.OutputTokens,
+		"model":         usage.Model,
+	}).Execute(nil)
+}
+
+func (r *supabaseRepository) GetDailyTokenUsage(_ context.Context) (*DailyTokenUsage, error) {
+	var results []DailyTokenUsage
+	err := r.db.RPC("get_daily_token_usage", map[string]any{}, &results)
+	if err != nil {
+		return nil, fmt.Errorf("get daily token usage: %w", err)
+	}
+	if len(results) == 0 {
+		return &DailyTokenUsage{}, nil
+	}
+	return &results[0], nil
+}
+
 // Float32SliceToVectorString converts a float32 slice to pgvector string format: "[0.1,0.2,...]"
 func Float32SliceToVectorString(v []float32) string {
 	buf := make([]byte, 0, len(v)*10)

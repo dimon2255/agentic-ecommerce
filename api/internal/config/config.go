@@ -17,6 +17,7 @@ type Config struct {
 	CORS      CORSConfig      `mapstructure:"cors"`
 	Checkout  CheckoutConfig  `mapstructure:"checkout"`
 	Assistant AssistantConfig `mapstructure:"assistant"`
+	Telemetry TelemetryConfig `mapstructure:"telemetry"`
 }
 
 type ServerConfig struct {
@@ -49,10 +50,31 @@ type CheckoutConfig struct {
 }
 
 type AssistantConfig struct {
-	AnthropicAPIKey string `mapstructure:"anthropic_api_key"`
-	VoyageAPIKey    string `mapstructure:"voyage_api_key"`
-	Model           string `mapstructure:"model"`
-	EmbeddingModel  string `mapstructure:"embedding_model"`
+	AnthropicAPIKey string              `mapstructure:"anthropic_api_key"`
+	VoyageAPIKey    string              `mapstructure:"voyage_api_key"`
+	Model           string              `mapstructure:"model"`
+	EmbeddingModel  string              `mapstructure:"embedding_model"`
+	RateLimit       AssistantRateConfig `mapstructure:"rate_limit"`
+	Cost            AssistantCostConfig `mapstructure:"cost"`
+}
+
+type AssistantRateConfig struct {
+	UserMessagesPerHour  int `mapstructure:"user_messages_per_hour"`
+	UserBurstPerMinute   int `mapstructure:"user_burst_per_minute"`
+	GuestMessagesPerHour int `mapstructure:"guest_messages_per_hour"`
+	GuestBurstPerMinute  int `mapstructure:"guest_burst_per_minute"`
+}
+
+type AssistantCostConfig struct {
+	DailyBudgetCents        int           `mapstructure:"daily_budget_cents"`
+	CircuitBreakerThreshold int           `mapstructure:"circuit_breaker_threshold"`
+	CircuitBreakerWindow    time.Duration `mapstructure:"circuit_breaker_window"`
+	CircuitBreakerOpenDur   time.Duration `mapstructure:"circuit_breaker_open_duration"`
+}
+
+type TelemetryConfig struct {
+	ServiceName  string `mapstructure:"service_name"`
+	OTLPEndpoint string `mapstructure:"otlp_endpoint"`
 }
 
 func Load(configPaths ...string) (*Config, error) {
@@ -78,6 +100,16 @@ func Load(configPaths ...string) (*Config, error) {
 	v.SetDefault("checkout.webhook_max_body_size", 65536)
 	v.SetDefault("assistant.model", "claude-sonnet-4-5")
 	v.SetDefault("assistant.embedding_model", "voyage-3-large")
+	v.SetDefault("assistant.rate_limit.user_messages_per_hour", 20)
+	v.SetDefault("assistant.rate_limit.user_burst_per_minute", 5)
+	v.SetDefault("assistant.rate_limit.guest_messages_per_hour", 5)
+	v.SetDefault("assistant.rate_limit.guest_burst_per_minute", 2)
+	v.SetDefault("assistant.cost.daily_budget_cents", 5000)
+	v.SetDefault("assistant.cost.circuit_breaker_threshold", 3)
+	v.SetDefault("assistant.cost.circuit_breaker_window", "30s")
+	v.SetDefault("assistant.cost.circuit_breaker_open_duration", "60s")
+	v.SetDefault("telemetry.service_name", "eshop-api")
+	v.SetDefault("telemetry.otlp_endpoint", "")
 
 	// YAML config file
 	v.SetConfigName("config")
@@ -115,6 +147,16 @@ func Load(configPaths ...string) (*Config, error) {
 		"assistant.voyage_api_key",
 		"assistant.model",
 		"assistant.embedding_model",
+		"assistant.rate_limit.user_messages_per_hour",
+		"assistant.rate_limit.user_burst_per_minute",
+		"assistant.rate_limit.guest_messages_per_hour",
+		"assistant.rate_limit.guest_burst_per_minute",
+		"assistant.cost.daily_budget_cents",
+		"assistant.cost.circuit_breaker_threshold",
+		"assistant.cost.circuit_breaker_window",
+		"assistant.cost.circuit_breaker_open_duration",
+		"telemetry.service_name",
+		"telemetry.otlp_endpoint",
 	} {
 		v.BindEnv(key)
 	}

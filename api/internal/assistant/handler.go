@@ -2,9 +2,10 @@ package assistant
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/json"
 	"fmt"
-	"log"
+	"log/slog"
 	"net/http"
 	"time"
 
@@ -62,9 +63,9 @@ func (h *Handler) Chat(w http.ResponseWriter, r *http.Request) {
 
 // ChatWithTools handles POST /tools — processes a message using Claude tool use.
 func (h *Handler) ChatWithTools(w http.ResponseWriter, r *http.Request) {
-	userID, ok := middleware.GetUserID(r.Context())
-	if !ok {
-		response.Error(w, http.StatusUnauthorized, "authentication required")
+	userID, isGuest := resolveIdentity(r)
+	if userID == "" {
+		response.Error(w, http.StatusUnauthorized, "authentication or session ID required")
 		return
 	}
 
@@ -74,7 +75,7 @@ func (h *Handler) ChatWithTools(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	resp, err := h.svc.ChatWithTools(r.Context(), userID, req)
+	resp, err := h.svc.ChatWithTools(r.Context(), userID, isGuest, req)
 	if err != nil {
 		response.ErrorFromAppError(w, r, err)
 		return
@@ -85,9 +86,9 @@ func (h *Handler) ChatWithTools(w http.ResponseWriter, r *http.Request) {
 
 // StreamChat handles POST /stream — streams an AI response via SSE with tool use.
 func (h *Handler) StreamChat(w http.ResponseWriter, r *http.Request) {
-	userID, ok := middleware.GetUserID(r.Context())
-	if !ok {
-		http.Error(w, `{"error":"authentication required"}`, http.StatusUnauthorized)
+	userID, isGuest := resolveIdentity(r)
+	if userID == "" {
+		http.Error(w, `{"error":"authentication or session ID required"}`, http.StatusUnauthorized)
 		return
 	}
 
@@ -120,10 +121,31 @@ func (h *Handler) StreamChat(w http.ResponseWriter, r *http.Request) {
 		flusher.Flush()
 	}
 
-	if err := h.svc.StreamChat(ctx, userID, req, emit); err != nil {
-		log.Printf("[assistant] StreamChat error: %v", err)
+	if err := h.svc.StreamChat(ctx, userID, isGuest, req, emit); err != nil {
+		slog.ErrorContext(ctx, "StreamChat error", "error", err)
 		b, _ := json.Marshal(map[string]string{"message": "An error occurred while processing your request."})
 		fmt.Fprintf(w, "event: error\ndata: %s\n\n", string(b))
 		flusher.Flush()
 	}
+}
+
+// resolveIdentity extracts user identity from auth context or X-Session-ID header.
+// Returns (userID, isGuest). For guests, userID is a deterministic UUID derived from session ID.
+func resolveIdentity(r *http.Request) (string, bool) {
+	if userID, ok := middleware.GetUserID(r.Context()); ok {
+		return userID, false
+	}
+	sessionID := r.Header.Get("X-Session-ID")
+	if sessionID == "" {
+		return "", false
+	}
+	return guestUserID(sessionID), true
+}
+
+// guestUserID generates a deterministic UUID-like string from a session ID.
+// This avoids schema changes to chat_sessions.user_id while keeping guest sessions trackable.
+func guestUserID(sessionID string) string {
+	h := sha256.Sum256([]byte("guest:" + sessionID))
+	return fmt.Sprintf("%08x-%04x-%04x-%04x-%012x",
+		h[0:4], h[4:6], h[6:8], h[8:10], h[10:16])
 }

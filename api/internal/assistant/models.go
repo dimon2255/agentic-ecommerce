@@ -55,6 +55,20 @@ type ProductMatch struct {
 	Similarity float64 `json:"similarity"`
 }
 
+// TokenUsageRecord represents a token usage entry for cost tracking.
+type TokenUsageRecord struct {
+	SessionID    string `json:"session_id"`
+	InputTokens  int    `json:"input_tokens"`
+	OutputTokens int    `json:"output_tokens"`
+	Model        string `json:"model"`
+}
+
+// DailyTokenUsage holds aggregated daily token counts.
+type DailyTokenUsage struct {
+	TotalInputTokens  int64 `json:"total_input_tokens"`
+	TotalOutputTokens int64 `json:"total_output_tokens"`
+}
+
 // EmbeddingRecord is what gets stored in product_embeddings.
 type EmbeddingRecord struct {
 	ProductID string  `json:"product_id"`

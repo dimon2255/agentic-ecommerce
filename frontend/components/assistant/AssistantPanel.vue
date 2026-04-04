@@ -45,23 +45,7 @@
             </div>
           </div>
 
-          <!-- Auth gate -->
-          <div v-if="!user" class="flex-1 flex items-center justify-center p-6">
-            <div class="text-center">
-              <div class="w-14 h-14 mx-auto mb-3 rounded-full bg-surface-elevated border border-[var(--border-default)] flex items-center justify-center">
-                <svg class="w-6 h-6 text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a5.969 5.969 0 01-.474-.065 4.48 4.48 0 00.978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z" />
-                </svg>
-              </div>
-              <p class="text-sm text-muted mb-3">Sign in to use the assistant</p>
-              <NuxtLink to="/auth/login" @click="close" class="text-sm text-accent hover:text-accent-hover font-medium transition-colors">
-                Sign in
-              </NuxtLink>
-            </div>
-          </div>
-
           <!-- Chat area -->
-          <template v-else>
             <div
               ref="messagesContainer"
               class="flex-1 overflow-y-auto px-4 py-4 space-y-3"
@@ -154,7 +138,6 @@
                 </button>
               </div>
             </div>
-          </template>
         </div>
       </Transition>
     </Teleport>
@@ -206,6 +189,7 @@ function getProducts(toolResults: Array<{ tool: string; result: any }>): Product
 const user = useSupabaseUser()
 const { isOpen, close } = useAssistantPanel()
 const { messages, loading, error, sendMessage, clearChat } = useAssistant()
+const isGuest = computed(() => !user.value)
 
 const panelRef = ref<HTMLElement | null>(null)
 const messagesContainer = ref<HTMLElement | null>(null)
@@ -213,11 +197,11 @@ const inputRef = ref<HTMLInputElement | null>(null)
 const input = ref('')
 const isMobile = ref(false)
 
-const suggestions = [
-  'Best laptops under $1500',
-  'Show me headphones',
-  "What's in my cart?",
-]
+const suggestions = computed(() => {
+  const base = ['Best laptops under $1500', 'Show me headphones']
+  if (!isGuest.value) base.push("What's in my cart?")
+  return base
+})
 
 function handleSuggestion(text: string) {
   input.value = ''

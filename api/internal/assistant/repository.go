@@ -18,4 +18,10 @@ type Repository interface {
 
 	// UpsertEmbedding inserts or updates a product embedding.
 	UpsertEmbedding(ctx context.Context, record EmbeddingRecord) error
+
+	// SaveTokenUsage persists a token usage record for cost tracking.
+	SaveTokenUsage(ctx context.Context, usage TokenUsageRecord) error
+
+	// GetDailyTokenUsage returns aggregated token usage for the current UTC day.
+	GetDailyTokenUsage(ctx context.Context) (*DailyTokenUsage, error)
 }

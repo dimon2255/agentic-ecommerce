@@ -105,9 +105,9 @@ Phase 1: Data Foundation + Proof of Life ✓
     |
 Phase 2: Tool Use + SSE Streaming ✓
     |
-Phase 3: Chat UX + Product Cards  ← IN PROGRESS
+Phase 3: Chat UX + Product Cards ✓
     |
-Phase 4: Auth Guards + Rate Limiting + Polish
+Phase 4: Auth Guards + Rate Limiting + Observability ✓
     |
 Phase 5: Personalization + Analytics (future/V2)
 ```
@@ -121,10 +121,12 @@ Phase 5: Personalization + Analytics (future/V2)
 | **1** | **1C:** Frontend Proof of Life | Done | feat/ai-assistant-phase1-db | 2026-04-01 | useAssistant composable, pages/assistant.vue, nav link |
 | **2** | **2A:** Tool Definitions + Execution Loop | Done | feat/ai-assistant-phase2-tools | 2026-04-02 | PR #14. 5 tools → catalog/cart services, agentic loop (max 5 iter), CompleteWithTools, /tools route, 17 tests |
 | **2** | **2B:** SSE Streaming + Conversation Persistence | Done | feat/ai-assistant-phase2-tools | 2026-04-02 | PR #14. StreamWithTools, SSE handler, timeout bypass, history helper, frontend fetch+ReadableStream, 29 tests |
-| **3** | **3A:** Slide-over Panel + FAB | In Progress | feat/ai-assistant-phase3-chat-ux | — | 420px panel, FAB trigger, mobile overlay, focus trap, a11y baked in |
-| **3** | **3B:** Product Cards + Suggestion Chips | Pending | feat/ai-assistant-phase3-chat-ux | — | tool_result SSE event, ChatProductCard, ChatMessage, suggestion chips |
-| **4** | **4A:** Rate Limiting + Cost Tracking | Pending | — | — | Per-user message quotas, Anthropic circuit breaker, tokens_used tracking |
-| **4** | **4B:** Guest Mode + System Prompt Polish | Pending | — | — | Limited guest tools, auth-gated actions, finalized guardrails |
+| **3** | **3A:** Slide-over Panel + FAB | Done | feat/ai-assistant-phase3-chat-ux | 2026-04-04 | PR #15. 420px panel, FAB trigger, mobile overlay, focus trap, a11y baked in |
+| **3** | **3B:** Product Cards + Suggestion Chips | Done | feat/ai-assistant-phase3-chat-ux | 2026-04-04 | PR #15. tool_result SSE event, ChatProductCard, ChatMessage, suggestion chips |
+| **4** | **4A:** Config + slog + Rate Limiting | Done | feat/ai-assistant-phase4-guards-observability | 2026-04-04 | Structured JSON logging (slog), per-user/guest sliding-window rate limiter, config extensions |
+| **4** | **4B:** Guest Mode + System Prompt Polish | Done | feat/ai-assistant-phase4-guards-observability | 2026-04-04 | GuestTools (no cart), OptionalAuth, frontend auth gate removed, hardened system prompt |
+| **4** | **4C:** Cost Tracking + Circuit Breaker | Done | feat/ai-assistant-phase4-guards-observability | 2026-04-04 | Token usage capture, chat_token_usage table, daily budget, circuit breaker on Anthropic client |
+| **4** | **4D:** OpenTelemetry + Azure Monitor | Done | feat/ai-assistant-phase4-guards-observability | 2026-04-04 | pkg/telemetry, OTLP exporter, otelhttp middleware, spans on Anthropic/Supabase/Voyage, traced slog, graceful shutdown |
 | **5** | TBD | Pending | — | — | Order history-aware recs, conversation analytics, A/B test prompts |
 
 ## Phase 1 Details
