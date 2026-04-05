@@ -10,6 +10,10 @@ type supabaseRepository struct {
 	db *supabase.Client
 }
 
+var allowedProductSortColumns = map[string]bool{
+	"created_at": true, "updated_at": true, "name": true, "price": true, "status": true,
+}
+
 // NewSupabaseRepository creates a catalog repository backed by Supabase PostgREST.
 func NewSupabaseRepository(db *supabase.Client) Repository {
 	return &supabaseRepository{db: db}
@@ -75,14 +79,14 @@ func (r *supabaseRepository) DeleteCategory(_ context.Context, slug string) erro
 // --- Products ---
 
 func (r *supabaseRepository) ListProducts(_ context.Context, filter ProductFilter) ([]Product, int, error) {
-	// Determine sort
+	// Determine sort (whitelist allowed columns)
 	sortBy := "created_at"
-	sortDir := "desc"
-	if filter.SortBy != "" {
+	if allowedProductSortColumns[filter.SortBy] {
 		sortBy = filter.SortBy
 	}
-	if filter.SortDir == "asc" || filter.SortDir == "desc" {
-		sortDir = filter.SortDir
+	sortDir := "desc"
+	if filter.SortDir == "asc" {
+		sortDir = "asc"
 	}
 
 	query := r.db.From("products").Select("*").Order(sortBy, sortDir).CountExact()

@@ -96,10 +96,15 @@ func (v *Validator) Validate() error {
 	return apperror.NewInvalidInput("validation failed", v.errors)
 }
 
-func (v *Validator) addError(field, msg string) {
+// AddError records a custom validation error for a field.
+func (v *Validator) AddError(field, msg string) {
 	if _, exists := v.errors[field]; !exists {
 		v.errors[field] = msg
 	}
+}
+
+func (v *Validator) addError(field, msg string) {
+	v.AddError(field, msg)
 }
 
 func (v *Validator) addErrorf(field, format string, args ...any) {

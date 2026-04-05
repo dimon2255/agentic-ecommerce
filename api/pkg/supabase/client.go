@@ -94,6 +94,16 @@ func (q *QueryBuilder) Fts(column, query string) *QueryBuilder {
 	return q
 }
 
+func (q *QueryBuilder) Gte(column, value string) *QueryBuilder {
+	q.params.Set(column, "gte."+value)
+	return q
+}
+
+func (q *QueryBuilder) Lte(column, value string) *QueryBuilder {
+	q.params.Set(column, "lte."+value)
+	return q
+}
+
 // CountExact requests PostgREST to return the total count in the Content-Range header.
 // Must be called before Execute. The count is returned via ExecuteWithCount.
 func (q *QueryBuilder) CountExact() *QueryBuilder {
