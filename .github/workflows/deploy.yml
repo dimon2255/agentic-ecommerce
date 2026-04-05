@@ -161,6 +161,7 @@ jobs:
       TF_VAR_supabase_url: ${{ vars.SUPABASE_URL }}
       TF_VAR_frontend_supabase_key: ${{ vars.SUPABASE_ANON_KEY }}
       TF_VAR_frontend_stripe_key: ${{ vars.STRIPE_PUBLISHABLE_KEY }}
+      TF_VAR_otlp_endpoint: ${{ vars.OTLP_ENDPOINT || 'localhost:4317' }}
       TF_VAR_environment: ${{ needs.setup.outputs.environment }}
       TF_VAR_api_image_tag: ${{ needs.build-push.outputs.image_tag }}
       TF_VAR_frontend_image_tag: ${{ needs.build-push.outputs.image_tag }}

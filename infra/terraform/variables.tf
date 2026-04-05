@@ -115,3 +115,11 @@ variable "frontend_stripe_key" {
   type        = string
   default     = ""
 }
+
+# --- Telemetry ---
+
+variable "otlp_endpoint" {
+  description = "OTLP gRPC endpoint for traces and metrics (e.g. localhost:4317 for ACA built-in agent)"
+  type        = string
+  default     = "localhost:4317"
+}

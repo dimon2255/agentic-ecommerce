@@ -91,6 +91,16 @@ resource "azurerm_container_app" "api" {
         value = "https://${local.frontend_fqdn}"
       }
 
+      env {
+        name  = "ESHOP_TELEMETRY_OTLP_ENDPOINT"
+        value = var.otlp_endpoint
+      }
+
+      env {
+        name  = "ESHOP_TELEMETRY_SERVICE_NAME"
+        value = "eshop-api-${var.environment}"
+      }
+
       # Secret references
       env {
         name        = "ESHOP_SUPABASE_SERVICE_ROLE_KEY"
