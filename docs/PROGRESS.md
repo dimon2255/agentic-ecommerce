@@ -34,20 +34,24 @@ Skip pure-layout components. Focus on behavior, not markup.
 
 | # | Task | Status |
 |---|------|--------|
-| 2.1 | Test `PriceDisplay` (formatting, currency, sale prices) | Pending |
-| 2.2 | Test `SkuSelector` (variant selection, availability, price update) | Pending |
-| 2.3 | Test `CartItem` (quantity change, remove, price calculation) | Pending |
-| 2.4 | Test `ProductCard` (render, link, image fallback) | Pending |
-| 2.5 | Test `CategoryCard` (render, navigation) | Pending |
-| 2.6 | Test `Toast` (show/dismiss, types) | Pending |
-| 2.7 | Test `AssistantPanel` (open/close, message rendering) | Pending |
-| 2.8 | Test `ChatProductCard` (product data display) | Pending |
-| 2.9 | Test admin `DataTable` (sorting, pagination, empty state) | Pending |
-| 2.10 | Test admin `ProductForm` (validation, submit, image upload) | Pending |
-| 2.11 | Test admin `CategoryForm` (validation, submit) | Pending |
-| 2.12 | Test admin `ConfirmDialog` (confirm/cancel actions) | Pending |
-| 2.13 | Test admin `StatusBadge` (status variants rendering) | Pending |
-| 2.14 | Test admin `ImageUploader` (file select, preview, upload) | Pending |
+| 2.1 | Test `PriceDisplay` (3 tests — base, override, null) | Done |
+| 2.2 | Test `SkuSelector` (7 tests — select, match, availability, aria) | Done |
+| 2.3 | Test `CartItem` (7 tests — qty +/-, remove, disabled, total) | Done |
+| 2.4 | Test `ProductCard` (4 tests — name, price, image, link) | Done |
+| 2.5 | Test `CategoryCard` (3 tests — name, link, gradient) | Done |
+| 2.6 | Test `Toast` (3 tests — render, role="alert", empty) | Done |
+| 2.7 | Test `AssistantPanel` — Skipped (343 LOC, heavy mocking, deferred) | Deferred |
+| 2.8 | Test `ChatProductCard` (3 tests — name, image, fallback) | Done |
+| 2.9 | Test admin `DataTable` (10 tests — sort, pagination, states) | Done |
+| 2.10 | Test admin `ProductForm` — Skipped (thin form wrapper) | Skipped |
+| 2.11 | Test admin `CategoryForm` — Skipped (thin form wrapper) | Skipped |
+| 2.12 | Test admin `ConfirmDialog` (5 tests — open/close, emit, variant) | Done |
+| 2.13 | Test admin `StatusBadge` (4 tests — text, label, class mapping) | Done |
+| 2.14 | Test admin `ImageUploader` — Skipped (async upload, deferred) | Deferred |
+| 2.15 | Test admin `KpiCard` (5 tests — format, prefix, loading) | Done |
+| 2.16 | Test admin `SlugInput` (6 tests — auto-slug, manual, special chars) | Done |
+
+**Phase 2 Results:** 12 test files, 60 tests, all passing. Tested components at 99% stmts. Skipped thin wrappers + deferred complex async components.
 
 ## Phase 3 — E2E Tests (Playwright)
 
