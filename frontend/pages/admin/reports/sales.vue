@@ -14,9 +14,9 @@
 
     <!-- Summary cards -->
     <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
-      <KpiCard label="Total Revenue" :value="totalRevenue" prefix="$" format="currency" :loading="loading" />
-      <KpiCard label="Total Orders" :value="totalOrders" :loading="loading" />
-      <KpiCard label="Avg Order Value" :value="avgOrder" prefix="$" format="currency" :loading="loading" />
+      <AdminKpiCard label="Total Revenue" :value="totalRevenue" prefix="$" format="currency" :loading="loading" />
+      <AdminKpiCard label="Total Orders" :value="totalOrders" :loading="loading" />
+      <AdminKpiCard label="Avg Order Value" :value="avgOrder" prefix="$" format="currency" :loading="loading" />
     </div>
 
     <!-- Revenue chart -->
@@ -25,7 +25,7 @@
       <div v-if="loading" class="space-y-3">
         <div v-for="i in 5" :key="i" class="h-6 bg-[var(--bg-hover)] rounded animate-pulse" />
       </div>
-      <SimpleChart v-else :bars="revenueBars" color="accent" />
+      <AdminSimpleChart v-else :bars="revenueBars" color="accent" />
     </div>
 
     <!-- Data table -->

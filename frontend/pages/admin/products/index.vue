@@ -14,7 +14,7 @@
       </NuxtLink>
     </div>
 
-    <DataTable
+    <AdminDataTable
       :columns="columns"
       :rows="products"
       :loading="loading"
@@ -44,7 +44,7 @@
       </template>
 
       <template #cell-status="{ value }">
-        <StatusBadge :status="value" />
+        <AdminStatusBadge :status="value" />
       </template>
 
       <template #cell-base_price="{ value }">
@@ -54,7 +54,7 @@
       <template #cell-created_at="{ value }">
         {{ new Date(value).toLocaleDateString() }}
       </template>
-    </DataTable>
+    </AdminDataTable>
   </div>
 </template>
 

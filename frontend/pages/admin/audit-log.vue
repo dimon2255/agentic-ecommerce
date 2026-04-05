@@ -5,7 +5,7 @@
       <p class="text-sm text-secondary mt-1">Admin action history</p>
     </div>
 
-    <DataTable
+    <AdminDataTable
       :columns="columns"
       :rows="entries"
       :loading="loading"
@@ -73,7 +73,7 @@
         </button>
         <span v-else class="text-muted text-xs">-</span>
       </template>
-    </DataTable>
+    </AdminDataTable>
 
     <!-- Expanded changes viewer -->
     <Teleport to="body">

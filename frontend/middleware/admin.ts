@@ -1,7 +1,14 @@
 export default defineNuxtRouteMiddleware(async (to) => {
   const user = useSupabaseUser()
+
+  // On hard refresh, useSupabaseUser() may not be populated yet.
+  // Wait for the Supabase client to restore the session from the cookie.
   if (!user.value) {
-    return navigateTo(`/auth/login?redirect=${encodeURIComponent(to.fullPath)}`)
+    const client = useSupabaseClient()
+    const { data: { session } } = await client.auth.getSession()
+    if (!session) {
+      return navigateTo(`/auth/login?redirect=${encodeURIComponent(to.fullPath)}`)
+    }
   }
 
   const { permissions, fetchPermissions } = useAdminAuth()

@@ -1,6 +1,6 @@
 <template>
   <form class="space-y-6" @submit.prevent="$emit('submit')">
-    <SlugInput
+    <AdminSlugInput
       :name="form.name"
       :slug="form.slug"
       @update:name="form.name = $event"
@@ -51,7 +51,7 @@
       </div>
     </div>
 
-    <ImageUploader v-model="form.images" />
+    <AdminImageUploader v-model="form.images" />
 
     <div class="flex items-center gap-3 pt-4 border-t border-[var(--border-default)]">
       <button type="submit" class="btn-accent px-6 py-2.5 rounded-lg" :disabled="saving">

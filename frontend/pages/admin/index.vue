@@ -7,24 +7,24 @@
 
     <!-- KPI Cards -->
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-      <KpiCard
+      <AdminKpiCard
         label="Total Revenue"
         :value="kpis?.total_revenue ?? 0"
         prefix="$"
         format="currency"
         :loading="loading"
       />
-      <KpiCard
+      <AdminKpiCard
         label="Total Orders"
         :value="kpis?.total_orders ?? 0"
         :loading="loading"
       />
-      <KpiCard
+      <AdminKpiCard
         label="Active Products"
         :value="kpis?.active_products ?? 0"
         :loading="loading"
       />
-      <KpiCard
+      <AdminKpiCard
         label="Customers"
         :value="kpis?.total_customers ?? 0"
         :loading="loading"

@@ -14,9 +14,9 @@
 
     <!-- Summary cards -->
     <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
-      <KpiCard label="Total Input Tokens" :value="totalInput" :loading="loading" />
-      <KpiCard label="Total Output Tokens" :value="totalOutput" :loading="loading" />
-      <KpiCard label="Total Requests" :value="totalRequests" :loading="loading" />
+      <AdminKpiCard label="Total Input Tokens" :value="totalInput" :loading="loading" />
+      <AdminKpiCard label="Total Output Tokens" :value="totalOutput" :loading="loading" />
+      <AdminKpiCard label="Total Requests" :value="totalRequests" :loading="loading" />
     </div>
 
     <!-- Usage chart -->
@@ -25,7 +25,7 @@
       <div v-if="loading" class="space-y-3">
         <div v-for="i in 5" :key="i" class="h-6 bg-[var(--bg-hover)] rounded animate-pulse" />
       </div>
-      <SimpleChart v-else :bars="requestBars" color="info" />
+      <AdminSimpleChart v-else :bars="requestBars" color="info" />
     </div>
 
     <!-- Data table -->

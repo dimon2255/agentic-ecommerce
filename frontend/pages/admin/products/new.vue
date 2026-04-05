@@ -6,7 +6,7 @@
     </div>
 
     <div class="card-dark p-6">
-      <ProductForm
+      <AdminProductForm
         :form="form"
         :categories="categories"
         :saving="saving"

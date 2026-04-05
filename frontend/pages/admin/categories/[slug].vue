@@ -34,7 +34,7 @@
       <div v-if="loadingCategory" class="space-y-4">
         <div v-for="i in 3" :key="i" class="h-10 bg-[var(--bg-hover)] rounded animate-pulse" />
       </div>
-      <CategoryForm
+      <AdminCategoryForm
         v-else
         :form="form"
         :categories="parentOptions"
@@ -120,7 +120,7 @@
       </div>
     </div>
 
-    <ConfirmDialog
+    <AdminConfirmDialog
       :open="showDelete"
       title="Delete Category"
       message="This will delete this category. Products in this category will be affected."

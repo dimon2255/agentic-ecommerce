@@ -41,6 +41,13 @@
             </NuxtLink>
             <ClientOnly>
               <template v-if="user">
+                <NuxtLink
+                  v-if="isAdmin"
+                  to="/admin"
+                  class="text-sm font-medium text-accent hover:text-accent-hover transition-colors"
+                >
+                  Admin
+                </NuxtLink>
                 <span class="text-sm text-muted hidden sm:inline max-w-[150px] truncate">{{ user.email }}</span>
                 <button
                   @click="handleLogout"
@@ -88,13 +95,31 @@ const router = useRouter()
 const route = useRoute()
 const { itemCount, refresh } = useCart()
 const { isOpen: assistantOpen, toggle: toggleAssistant } = useAssistantPanel()
+const { permissions, fetchPermissions, hasAnyPermission, reset: resetAdmin } = useAdminAuth()
+
+const isAdmin = computed(() =>
+  hasAnyPermission('catalog:read', 'orders:read', 'reports:read', 'audit:read')
+)
 
 onMounted(() => {
   refresh()
+  if (user.value) {
+    fetchPermissions()
+  }
+})
+
+// Refetch permissions on login, clear on logout
+watch(user, (newUser) => {
+  if (newUser) {
+    fetchPermissions()
+  } else {
+    resetAdmin()
+  }
 })
 
 async function handleLogout() {
   await client.auth.signOut()
+  resetAdmin()
   router.push('/')
 }
 </script>

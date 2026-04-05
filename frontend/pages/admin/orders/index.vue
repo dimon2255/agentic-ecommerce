@@ -5,7 +5,7 @@
       <p class="text-sm text-secondary mt-1">View and manage customer orders</p>
     </div>
 
-    <DataTable
+    <AdminDataTable
       :columns="columns"
       :rows="orders"
       :loading="loading"
@@ -54,7 +54,7 @@
       </template>
 
       <template #cell-status="{ value }">
-        <StatusBadge :status="value" />
+        <AdminStatusBadge :status="value" />
       </template>
 
       <template #cell-total="{ value }">
@@ -64,7 +64,7 @@
       <template #cell-created_at="{ value }">
         {{ new Date(value).toLocaleDateString() }}
       </template>
-    </DataTable>
+    </AdminDataTable>
   </div>
 </template>
 

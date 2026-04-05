@@ -15,7 +15,7 @@
           <h1 class="text-2xl font-display font-bold">Order Details</h1>
           <p class="text-sm text-secondary mt-1 font-mono">{{ order.id }}</p>
         </div>
-        <StatusBadge :status="order.status" />
+        <AdminStatusBadge :status="order.status" />
       </div>
 
       <!-- Order info -->

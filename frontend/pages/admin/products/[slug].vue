@@ -34,7 +34,7 @@
       <div v-if="loadingProduct" class="space-y-4">
         <div v-for="i in 5" :key="i" class="h-10 bg-[var(--bg-hover)] rounded animate-pulse" />
       </div>
-      <ProductForm
+      <AdminProductForm
         v-else
         :form="form"
         :categories="categories"
@@ -92,7 +92,7 @@
             <tr v-for="sku in skus" :key="sku.id" class="border-b border-[var(--border-subtle)]">
               <td class="px-5 py-3 font-mono text-xs">{{ sku.sku_code }}</td>
               <td class="px-5 py-3">{{ sku.price_override != null ? `$${sku.price_override.toFixed(2)}` : 'Base' }}</td>
-              <td class="px-5 py-3"><StatusBadge :status="sku.status" /></td>
+              <td class="px-5 py-3"><AdminStatusBadge :status="sku.status" /></td>
               <td class="px-5 py-3">
                 <button
                   v-if="hasPermission('catalog:write')"
@@ -109,7 +109,7 @@
     </div>
 
     <!-- Delete confirmations -->
-    <ConfirmDialog
+    <AdminConfirmDialog
       :open="showDelete"
       title="Delete Product"
       message="This will permanently delete this product and all its SKUs. This cannot be undone."
@@ -118,7 +118,7 @@
       @confirm="handleDelete"
       @cancel="showDelete = false"
     />
-    <ConfirmDialog
+    <AdminConfirmDialog
       :open="showDeleteSku"
       title="Delete SKU"
       :message="`Delete SKU ${skuToDelete?.sku_code}?`"

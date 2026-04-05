@@ -1,6 +1,6 @@
 <template>
   <form class="space-y-6" @submit.prevent="$emit('submit')">
-    <SlugInput
+    <AdminSlugInput
       :name="form.name"
       :slug="form.slug"
       @update:name="form.name = $event"

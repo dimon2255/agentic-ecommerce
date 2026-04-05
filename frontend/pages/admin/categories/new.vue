@@ -6,7 +6,7 @@
     </div>
 
     <div class="card-dark p-6">
-      <CategoryForm
+      <AdminCategoryForm
         :form="form"
         :categories="parentOptions"
         :saving="saving"
