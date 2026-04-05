@@ -5,7 +5,7 @@ on:
     types: [published]
 
 concurrency:
-  group: deploy-production
+  group: deploy-${{ github.event.release.prerelease && 'staging' || 'production' }}
   cancel-in-progress: false
 
 permissions:
@@ -15,6 +15,21 @@ permissions:
   checks: write
 
 jobs:
+  setup:
+    name: Determine Environment
+    runs-on: ubuntu-latest
+    outputs:
+      environment: ${{ steps.env.outputs.environment }}
+    steps:
+      - name: Set environment
+        id: env
+        run: |
+          if [ "${{ github.event.release.prerelease }}" = "true" ]; then
+            echo "environment=staging" >> "$GITHUB_OUTPUT"
+          else
+            echo "environment=production" >> "$GITHUB_OUTPUT"
+          fi
+
   go-test:
     name: Go Tests
     runs-on: ubuntu-latest
@@ -52,8 +67,9 @@ jobs:
 
   build-push:
     name: Build & Push Images
-    needs: [go-test, frontend-test]
+    needs: [setup, go-test, frontend-test]
     runs-on: ubuntu-latest
+    environment: ${{ needs.setup.outputs.environment }}
     outputs:
       image_tag: ${{ steps.tag.outputs.tag }}
 
@@ -102,10 +118,10 @@ jobs:
           cache-to: type=gha,mode=max
 
   deploy:
-    name: Terraform Deploy
-    needs: [build-push]
+    name: Terraform Deploy (${{ needs.setup.outputs.environment }})
+    needs: [setup, build-push]
     runs-on: ubuntu-latest
-    environment: production
+    environment: ${{ needs.setup.outputs.environment }}
 
     env:
       # Terraform variable mapping — secrets
