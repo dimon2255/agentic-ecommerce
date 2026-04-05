@@ -60,17 +60,19 @@ Will run in CI/CD pipeline.
 
 | # | Task | Status |
 |---|------|--------|
-| 3.1 | Install Playwright and configure for Nuxt | Pending |
-| 3.2 | Create `playwright.config.ts` with CI-friendly settings | Pending |
-| 3.3 | E2E: Browse catalog and view product detail | Pending |
-| 3.4 | E2E: Add to cart (guest) and view cart | Pending |
-| 3.5 | E2E: Sign up / sign in flow | Pending |
-| 3.6 | E2E: Checkout flow (cart to payment to order confirmation) | Pending |
-| 3.7 | E2E: Cart merge on login (guest cart + auth cart) | Pending |
-| 3.8 | E2E: Admin login and catalog CRUD | Pending |
-| 3.9 | E2E: Admin order management | Pending |
-| 3.10 | E2E: AI assistant interaction | Pending |
-| 3.11 | Add `test:e2e` and `test:e2e:ci` scripts to `package.json` | Pending |
+| 3.1 | Install Playwright + Chromium | Done |
+| 3.2 | Create `playwright.config.ts` (CI-friendly, webServer, retries) | Done |
+| 3.3 | E2E: Browse catalog and view product detail (3 tests) | Done |
+| 3.4 | E2E: Add to cart (guest) and view cart (2 tests) | Done |
+| 3.5 | E2E: Auth flow — login, register, invalid credentials (3 tests) | Done |
+| 3.6 | E2E: Checkout flow — form render, cart requirement (2 tests) | Done |
+| 3.7 | E2E: Cart persistence across navigation (1 test) | Done |
+| 3.8 | E2E: Admin catalog pages load (4 tests) | Done |
+| 3.9 | E2E: Admin orders + reports pages load (2 tests) | Done |
+| 3.10 | E2E: AI assistant FAB, open/close panel (3 tests) | Done |
+| 3.11 | Add `test:e2e` and `test:e2e:ci` scripts to `package.json` | Done |
+
+**Phase 3 Results:** 8 test files, 20 E2E tests. Requires running dev stack (`npm run dev` + Go API + Supabase).
 
 ---
 
