@@ -72,7 +72,21 @@ Will run in CI/CD pipeline.
 | 3.10 | E2E: AI assistant FAB, open/close panel (3 tests) | Done |
 | 3.11 | Add `test:e2e` and `test:e2e:ci` scripts to `package.json` | Done |
 
-**Phase 3 Results:** 8 test files, 20 E2E tests. Requires running dev stack (`npm run dev` + Go API + Supabase).
+**Phase 3 Results:** 8 test files, 19 E2E tests. 14 passing, 5 flaky. Requires running dev stack (`npm run dev` + Go API + Supabase).
+
+### Known Flaky E2E Tests
+
+5 tests fail in headless Chromium due to Vue `reactive()` state timing with Playwright auto-waiting:
+
+- **Cart tests** (cart-guest x2, cart-merge, checkout) — SkuSelector radio button clicks don't register. The `[role="radio"]` click fires but Vue's `selectOption()` handler doesn't execute before the next assertion. Works intermittently.
+- **Assistant panel** — FAB click opens panel but the DOM update isn't detected by Playwright within the timeout.
+
+**Root cause:** Vue's reactivity system batches DOM updates. Playwright's `click()` returns before Vue processes the event. The `waitForTimeout(500)` workaround is insufficient.
+
+**Fix options:**
+1. Use `page.waitForFunction(() => document.querySelector('[aria-checked="true"]'))` after each radio click
+2. Use `--headed` mode (clicks register more reliably with visible browser)
+3. Add `data-testid` attributes to the SkuSelector for more stable selectors
 
 ---
 
