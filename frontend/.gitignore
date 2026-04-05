@@ -18,6 +18,13 @@ logs
 .fleet
 .idea
 
+# Test outputs
+test-results
+coverage
+playwright-report
+blob-report
+.nuxtrc
+
 # Local env files
 .env
 .env.*
