@@ -1,11 +1,16 @@
 package admin
 
 import (
+	"strings"
 	"time"
 
 	"github.com/dimon2255/agentic-ecommerce/api/internal/pagination"
 	"github.com/dimon2255/agentic-ecommerce/api/internal/validate"
 )
+
+var allowedImageContentTypes = []string{
+	"image/jpeg", "image/png", "image/webp", "image/gif",
+}
 
 // --- Orders (admin view) ---
 
@@ -119,7 +124,18 @@ type UploadURLRequest struct {
 func (r *UploadURLRequest) Validate() error {
 	v := validate.New()
 	v.Required("filename", r.Filename)
+	v.MaxLength("filename", r.Filename, 255)
 	v.Required("content_type", r.ContentType)
+	v.OneOf("content_type", r.ContentType, allowedImageContentTypes)
+
+	// Reject path traversal sequences
+	if strings.Contains(r.Filename, "..") ||
+		strings.Contains(r.Filename, "/") ||
+		strings.Contains(r.Filename, "\\") ||
+		strings.Contains(r.Filename, "\x00") {
+		v.AddError("filename", "contains invalid characters")
+	}
+
 	return v.Validate()
 }
 

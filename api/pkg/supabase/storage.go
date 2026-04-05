@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -33,12 +34,12 @@ func NewStorageClient(baseURL, apiKey string) *StorageClient {
 // The object is stored under a UUID-prefixed path to avoid collisions.
 // Returns (uploadURL, publicURL, error).
 func (c *StorageClient) CreateSignedUploadURL(bucket, filename, contentType string) (string, string, error) {
-	objectPath := fmt.Sprintf("%s/%s", uuid.New().String(), filename)
+	objectPath := fmt.Sprintf("%s/%s", uuid.New().String(), url.PathEscape(filename))
 
 	// POST /storage/v1/object/upload/sign/{bucket}/{objectPath}
-	url := fmt.Sprintf("%s/storage/v1/object/upload/sign/%s/%s", c.baseURL, bucket, objectPath)
+	reqURL := fmt.Sprintf("%s/storage/v1/object/upload/sign/%s/%s", c.baseURL, url.PathEscape(bucket), objectPath)
 
-	req, err := http.NewRequest("POST", url, nil)
+	req, err := http.NewRequest("POST", reqURL, nil)
 	if err != nil {
 		return "", "", fmt.Errorf("create request: %w", err)
 	}
@@ -69,12 +70,12 @@ func (c *StorageClient) CreateSignedUploadURL(bucket, filename, contentType stri
 
 	// Build full upload URL (the signed URL is a relative path with token)
 	uploadURL := fmt.Sprintf("%s/storage/v1%s", c.baseURL, result.URL)
-	publicURL := fmt.Sprintf("%s/storage/v1/object/public/%s/%s", c.baseURL, bucket, objectPath)
+	publicURL := fmt.Sprintf("%s/storage/v1/object/public/%s/%s", c.baseURL, url.PathEscape(bucket), objectPath)
 
 	return uploadURL, publicURL, nil
 }
 
 // GetPublicURL returns the public URL for a stored object.
 func (c *StorageClient) GetPublicURL(bucket, objectPath string) string {
-	return fmt.Sprintf("%s/storage/v1/object/public/%s/%s", c.baseURL, bucket, objectPath)
+	return fmt.Sprintf("%s/storage/v1/object/public/%s/%s", c.baseURL, url.PathEscape(bucket), url.PathEscape(objectPath))
 }

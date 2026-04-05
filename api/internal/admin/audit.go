@@ -2,7 +2,9 @@ package admin
 
 import (
 	"context"
+	"net"
 	"net/http"
+	"strings"
 
 	"github.com/dimon2255/agentic-ecommerce/api/pkg/supabase"
 )
@@ -46,13 +48,20 @@ func (s *AuditService) LogFromRequest(r *http.Request, userID, action, resourceT
 	})
 }
 
-// realIP extracts the client IP, preferring X-Forwarded-For if present.
+// realIP extracts the client IP from the request.
+// For X-Forwarded-For, only the last entry is trusted (proxy-appended);
+// earlier entries are user-controllable and ignored.
 func realIP(r *http.Request) string {
 	if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
-		return xff
+		parts := strings.Split(xff, ",")
+		return strings.TrimSpace(parts[len(parts)-1])
 	}
 	if xri := r.Header.Get("X-Real-IP"); xri != "" {
-		return xri
+		return strings.TrimSpace(xri)
 	}
-	return r.RemoteAddr
+	host, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		return r.RemoteAddr
+	}
+	return host
 }

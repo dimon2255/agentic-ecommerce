@@ -3,9 +3,37 @@ package admin
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/dimon2255/agentic-ecommerce/api/pkg/supabase"
 )
+
+// --- Input validation helpers ---
+
+var allowedOrderSortColumns = map[string]bool{
+	"created_at": true, "email": true, "status": true, "total": true,
+}
+
+func validSort(col string, allowed map[string]bool, fallback string) string {
+	if allowed[col] {
+		return col
+	}
+	return fallback
+}
+
+func validSortDir(dir string) string {
+	if dir == "asc" {
+		return "asc"
+	}
+	return "desc"
+}
+
+func validDateParam(s string) string {
+	if _, err := time.Parse("2006-01-02", s); err == nil {
+		return s
+	}
+	return ""
+}
 
 type supabaseRepository struct {
 	db *supabase.Client
@@ -32,22 +60,17 @@ func (r *supabaseRepository) ListOrders(_ context.Context, filter OrderFilter) (
 	if filter.Search != "" {
 		query = query.Ilike("email", filter.Search)
 	}
-	if filter.DateFrom != "" {
-		query = query.Gte("created_at", filter.DateFrom)
+	if df := validDateParam(filter.DateFrom); df != "" {
+		query = query.Gte("created_at", df)
 	}
-	if filter.DateTo != "" {
-		query = query.Lte("created_at", filter.DateTo+"T23:59:59Z")
+	if dt := validDateParam(filter.DateTo); dt != "" {
+		query = query.Lte("created_at", dt+"T23:59:59Z")
 	}
 
-	sortBy := "created_at"
-	sortDir := "desc"
-	if filter.SortBy != "" {
-		sortBy = filter.SortBy
-	}
-	if filter.SortDir != "" {
-		sortDir = filter.SortDir
-	}
-	query = query.Order(sortBy, sortDir)
+	query = query.Order(
+		validSort(filter.SortBy, allowedOrderSortColumns, "created_at"),
+		validSortDir(filter.SortDir),
+	)
 
 	if filter.PerPage > 0 {
 		query = query.Limit(filter.PerPage).Offset(filter.Offset())
@@ -123,11 +146,11 @@ func (r *supabaseRepository) GetDashboardKPIs(_ context.Context) (*DashboardKPIs
 
 func (r *supabaseRepository) GetSalesByDay(_ context.Context, dateFrom, dateTo string) ([]SalesByDay, error) {
 	query := r.db.From("admin_sales_by_day").Select("*")
-	if dateFrom != "" {
-		query = query.Gte("day", dateFrom)
+	if df := validDateParam(dateFrom); df != "" {
+		query = query.Gte("day", df)
 	}
-	if dateTo != "" {
-		query = query.Lte("day", dateTo)
+	if dt := validDateParam(dateTo); dt != "" {
+		query = query.Lte("day", dt)
 	}
 	query = query.Order("day", "desc").Limit(90)
 
@@ -144,11 +167,11 @@ func (r *supabaseRepository) GetSalesByDay(_ context.Context, dateFrom, dateTo s
 
 func (r *supabaseRepository) GetTokenUsageByDay(_ context.Context, dateFrom, dateTo string) ([]TokenUsageByDay, error) {
 	query := r.db.From("admin_token_usage_by_day").Select("*")
-	if dateFrom != "" {
-		query = query.Gte("day", dateFrom)
+	if df := validDateParam(dateFrom); df != "" {
+		query = query.Gte("day", df)
 	}
-	if dateTo != "" {
-		query = query.Lte("day", dateTo)
+	if dt := validDateParam(dateTo); dt != "" {
+		query = query.Lte("day", dt)
 	}
 	query = query.Order("day", "desc").Limit(90)
 
@@ -180,11 +203,11 @@ func (r *supabaseRepository) ListAuditLog(_ context.Context, filter AuditLogFilt
 	if filter.UserID != "" {
 		query = query.Eq("user_id", filter.UserID)
 	}
-	if filter.DateFrom != "" {
-		query = query.Gte("created_at", filter.DateFrom)
+	if df := validDateParam(filter.DateFrom); df != "" {
+		query = query.Gte("created_at", df)
 	}
-	if filter.DateTo != "" {
-		query = query.Lte("created_at", filter.DateTo+"T23:59:59Z")
+	if dt := validDateParam(filter.DateTo); dt != "" {
+		query = query.Lte("created_at", dt+"T23:59:59Z")
 	}
 
 	if filter.PerPage > 0 {
