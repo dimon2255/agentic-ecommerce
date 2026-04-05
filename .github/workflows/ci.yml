@@ -27,6 +27,7 @@ jobs:
       - name: Run tests
         working-directory: api
         run: |
+          set -o pipefail
           go test -v -count=1 -race -timeout 120s ./... 2>&1 | tee test-output.txt
           cat test-output.txt | go-junit-report -set-exit-code > test-results.xml
 

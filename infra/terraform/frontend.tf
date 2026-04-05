@@ -1,5 +1,5 @@
 resource "azurerm_container_app" "frontend" {
-  name                         = "eshop-frontend"
+  name                         = local.frontend_app_name
   container_app_environment_id = data.azurerm_container_app_environment.main.id
   resource_group_name          = data.azurerm_resource_group.main.name
   revision_mode                = "Single"
@@ -72,7 +72,7 @@ resource "azurerm_container_app" "frontend" {
 
       liveness_probe {
         transport        = "HTTP"
-        path             = "/"
+        path             = "/_health"
         port             = 3000
         interval_seconds = 30
         initial_delay    = 10
@@ -80,7 +80,7 @@ resource "azurerm_container_app" "frontend" {
 
       readiness_probe {
         transport        = "HTTP"
-        path             = "/"
+        path             = "/_health"
         port             = 3000
         interval_seconds = 10
         initial_delay    = 5

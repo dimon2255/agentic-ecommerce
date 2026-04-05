@@ -12,6 +12,10 @@ on:
         options:
           - staging
           - production
+      image_tag:
+        description: "Image tag to deploy (leave empty to build from HEAD)"
+        required: false
+        type: string
 
 concurrency:
   group: deploy-${{ inputs.environment || (github.event.release.prerelease && 'staging' || 'production') }}
@@ -90,8 +94,13 @@ jobs:
       - name: Determine image tag
         id: tag
         run: |
-          TAG="${{ github.event.release.tag_name }}"
+          TAG="${{ inputs.image_tag || github.event.release.tag_name }}"
           echo "tag=${TAG:-${{ github.sha }}}" >> "$GITHUB_OUTPUT"
+          if [ "${{ needs.setup.outputs.environment }}" = "production" ]; then
+            echo "latest=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "latest=false" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Azure Login (OIDC)
         uses: azure/login@v2
@@ -114,7 +123,7 @@ jobs:
           push: true
           tags: |
             ${{ vars.ACR_LOGIN_SERVER }}/eshop-api:${{ steps.tag.outputs.tag }}
-            ${{ vars.ACR_LOGIN_SERVER }}/eshop-api:latest
+            ${{ steps.tag.outputs.latest == 'true' && format('{0}/eshop-api:latest', vars.ACR_LOGIN_SERVER) || '' }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -126,7 +135,7 @@ jobs:
           push: true
           tags: |
             ${{ vars.ACR_LOGIN_SERVER }}/eshop-frontend:${{ steps.tag.outputs.tag }}
-            ${{ vars.ACR_LOGIN_SERVER }}/eshop-frontend:latest
+            ${{ steps.tag.outputs.latest == 'true' && format('{0}/eshop-frontend:latest', vars.ACR_LOGIN_SERVER) || '' }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -152,6 +161,7 @@ jobs:
       TF_VAR_supabase_url: ${{ vars.SUPABASE_URL }}
       TF_VAR_frontend_supabase_key: ${{ vars.SUPABASE_ANON_KEY }}
       TF_VAR_frontend_stripe_key: ${{ vars.STRIPE_PUBLISHABLE_KEY }}
+      TF_VAR_environment: ${{ needs.setup.outputs.environment }}
       TF_VAR_api_image_tag: ${{ needs.build-push.outputs.image_tag }}
       TF_VAR_frontend_image_tag: ${{ needs.build-push.outputs.image_tag }}
       ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
@@ -173,7 +183,7 @@ jobs:
 
       - name: Terraform Init
         working-directory: infra/terraform
-        run: terraform init
+        run: terraform init -backend-config="key=eshop-${{ needs.setup.outputs.environment }}.tfstate"
 
       - name: Terraform Plan
         working-directory: infra/terraform

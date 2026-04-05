@@ -1,5 +1,5 @@
 resource "azurerm_container_app" "api" {
-  name                         = "eshop-api"
+  name                         = local.api_app_name
   container_app_environment_id = data.azurerm_container_app_environment.main.id
   resource_group_name          = data.azurerm_resource_group.main.name
   revision_mode                = "Single"

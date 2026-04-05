@@ -8,11 +8,11 @@ terraform {
     }
   }
 
+  # State key is injected at init time via -backend-config="key=eshop-<env>.tfstate"
   backend "azurerm" {
     resource_group_name  = "tfstate-rg"
     storage_account_name = "tfstateeshop"
     container_name       = "tfstate"
-    key                  = "eshop.tfstate"
     use_oidc             = true
   }
 }
@@ -45,6 +45,8 @@ data "azurerm_user_assigned_identity" "main" {
 
 # Predict FQDNs from ACA environment to avoid circular dependency between apps
 locals {
-  api_fqdn      = "eshop-api.${data.azurerm_container_app_environment.main.default_domain}"
-  frontend_fqdn = "eshop-frontend.${data.azurerm_container_app_environment.main.default_domain}"
+  api_app_name      = "eshop-api-${var.environment}"
+  frontend_app_name = "eshop-frontend-${var.environment}"
+  api_fqdn          = "${local.api_app_name}.${data.azurerm_container_app_environment.main.default_domain}"
+  frontend_fqdn     = "${local.frontend_app_name}.${data.azurerm_container_app_environment.main.default_domain}"
 }

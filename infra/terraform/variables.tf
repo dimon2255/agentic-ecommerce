@@ -1,3 +1,15 @@
+# --- Environment ---
+
+variable "environment" {
+  description = "Deployment environment (staging or production)"
+  type        = string
+
+  validation {
+    condition     = contains(["staging", "production"], var.environment)
+    error_message = "Environment must be 'staging' or 'production'."
+  }
+}
+
 # --- Existing infrastructure references ---
 
 variable "resource_group_name" {
