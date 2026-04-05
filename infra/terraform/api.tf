@@ -122,20 +122,28 @@ resource "azurerm_container_app" "api" {
         secret_name = "voyage-api-key"
       }
 
+      startup_probe {
+        transport               = "HTTP"
+        path                    = "/health"
+        port                    = 9090
+        interval_seconds        = 3
+        failure_count_threshold = 10
+      }
+
       liveness_probe {
-        transport        = "HTTP"
-        path             = "/health"
-        port             = 9090
-        interval_seconds = 30
-        initial_delay    = 5
+        transport               = "HTTP"
+        path                    = "/health"
+        port                    = 9090
+        interval_seconds        = 30
+        failure_count_threshold = 3
       }
 
       readiness_probe {
-        transport        = "HTTP"
-        path             = "/health"
-        port             = 9090
-        interval_seconds = 10
-        initial_delay    = 3
+        transport               = "HTTP"
+        path                    = "/health"
+        port                    = 9090
+        interval_seconds        = 10
+        failure_count_threshold = 3
       }
     }
   }

@@ -70,20 +70,28 @@ resource "azurerm_container_app" "frontend" {
         value = "production"
       }
 
+      startup_probe {
+        transport               = "HTTP"
+        path                    = "/_health"
+        port                    = 3000
+        interval_seconds        = 3
+        failure_count_threshold = 10
+      }
+
       liveness_probe {
-        transport        = "HTTP"
-        path             = "/_health"
-        port             = 3000
-        interval_seconds = 30
-        initial_delay    = 10
+        transport               = "HTTP"
+        path                    = "/_health"
+        port                    = 3000
+        interval_seconds        = 30
+        failure_count_threshold = 3
       }
 
       readiness_probe {
-        transport        = "HTTP"
-        path             = "/_health"
-        port             = 3000
-        interval_seconds = 10
-        initial_delay    = 5
+        transport               = "HTTP"
+        path                    = "/_health"
+        port                    = 3000
+        interval_seconds        = 10
+        failure_count_threshold = 3
       }
     }
   }
