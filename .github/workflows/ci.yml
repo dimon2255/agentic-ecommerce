@@ -1,0 +1,154 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "api/**"
+      - "frontend/**"
+      - "infra/**"
+      - ".github/workflows/**"
+
+jobs:
+  go-test:
+    name: Go Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: api/go.mod
+          cache-dependency-path: api/go.sum
+
+      - name: Install go-junit-report
+        run: go install github.com/jstemmer/go-junit-report/v2@latest
+
+      - name: Run tests
+        working-directory: api
+        run: |
+          set -o pipefail
+          go test -v -count=1 -race -timeout 120s ./... 2>&1 | tee test-output.txt
+          cat test-output.txt | go-junit-report -set-exit-code > test-results.xml
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: go-test-results
+          path: api/test-results.xml
+          retention-days: 7
+
+  frontend-test:
+    name: Frontend Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Run tests
+        working-directory: frontend
+        run: npm run test:ci
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: frontend-test-results
+          path: frontend/test-results/junit.xml
+          retention-days: 7
+
+  test-report:
+    name: Test Report
+    needs: [go-test, frontend-test]
+    if: always()
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
+      checks: write
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Download Go test results
+        uses: actions/download-artifact@v8
+        with:
+          name: go-test-results
+          path: go-results
+
+      - name: Download frontend test results
+        uses: actions/download-artifact@v8
+        with:
+          name: frontend-test-results
+          path: frontend-results
+
+      - name: Go Test Report
+        uses: dorny/test-reporter@v3
+        with:
+          name: Go Test Results
+          path: go-results/test-results.xml
+          reporter: java-junit
+
+      - name: Frontend Test Report
+        uses: dorny/test-reporter@v3
+        with:
+          name: Frontend Test Results
+          path: frontend-results/junit.xml
+          reporter: java-junit
+
+  docker-build:
+    name: Docker Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Build API image
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: infra/docker/api.Dockerfile
+          push: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build frontend image
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: infra/docker/frontend.Dockerfile
+          push: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  tf-validate:
+    name: Terraform Validate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: hashicorp/setup-terraform@v4
+
+      - name: Terraform Format Check
+        run: terraform fmt -check -recursive
+        working-directory: infra/terraform
+
+      - name: Terraform Init
+        run: terraform init -backend=false
+        working-directory: infra/terraform
+
+      - name: Terraform Validate
+        run: terraform validate
+        working-directory: infra/terraform
