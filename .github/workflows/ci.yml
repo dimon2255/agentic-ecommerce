@@ -7,7 +7,7 @@ on:
       - "api/**"
       - "frontend/**"
       - "infra/**"
-      - ".github/workflows/ci.yml"
+      - ".github/workflows/**"
 
 jobs:
   go-test:
