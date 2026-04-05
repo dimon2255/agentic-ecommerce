@@ -1,0 +1,155 @@
+name: Deploy
+
+on:
+  release:
+    types: [published]
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+permissions:
+  id-token: write
+  contents: read
+  actions: read
+  checks: write
+
+jobs:
+  go-test:
+    name: Go Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: api/go.mod
+          cache-dependency-path: api/go.sum
+
+      - name: Run tests
+        working-directory: api
+        run: go test -count=1 -race -timeout 120s ./...
+
+  frontend-test:
+    name: Frontend Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Run tests
+        working-directory: frontend
+        run: npm run test:ci
+
+  build-push:
+    name: Build & Push Images
+    needs: [go-test, frontend-test]
+    runs-on: ubuntu-latest
+    outputs:
+      image_tag: ${{ steps.tag.outputs.tag }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Determine image tag
+        id: tag
+        run: echo "tag=${{ github.event.release.tag_name }}" >> "$GITHUB_OUTPUT"
+
+      - name: Azure Login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: ACR Login
+        run: az acr login --name ${{ vars.ACR_NAME }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build & push API image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: infra/docker/api.Dockerfile
+          push: true
+          tags: |
+            ${{ vars.ACR_LOGIN_SERVER }}/eshop-api:${{ steps.tag.outputs.tag }}
+            ${{ vars.ACR_LOGIN_SERVER }}/eshop-api:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build & push frontend image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: infra/docker/frontend.Dockerfile
+          push: true
+          tags: |
+            ${{ vars.ACR_LOGIN_SERVER }}/eshop-frontend:${{ steps.tag.outputs.tag }}
+            ${{ vars.ACR_LOGIN_SERVER }}/eshop-frontend:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy:
+    name: Terraform Deploy
+    needs: [build-push]
+    runs-on: ubuntu-latest
+    environment: production
+
+    env:
+      # Terraform variable mapping — secrets
+      TF_VAR_eshop_supabase_service_role_key: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      TF_VAR_eshop_supabase_jwt_secret: ${{ secrets.SUPABASE_JWT_SECRET }}
+      TF_VAR_eshop_stripe_secret_key: ${{ secrets.STRIPE_SECRET_KEY }}
+      TF_VAR_eshop_stripe_webhook_secret: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
+      TF_VAR_eshop_assistant_anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+      TF_VAR_eshop_assistant_voyage_api_key: ${{ secrets.VOYAGE_API_KEY }}
+      # Terraform variable mapping — non-secret
+      TF_VAR_resource_group_name: ${{ vars.RESOURCE_GROUP_NAME }}
+      TF_VAR_aca_environment_name: ${{ vars.ACA_ENVIRONMENT_NAME }}
+      TF_VAR_acr_name: ${{ vars.ACR_NAME }}
+      TF_VAR_managed_identity_name: ${{ vars.MANAGED_IDENTITY_NAME }}
+      TF_VAR_supabase_url: ${{ vars.SUPABASE_URL }}
+      TF_VAR_frontend_supabase_key: ${{ vars.SUPABASE_ANON_KEY }}
+      TF_VAR_frontend_stripe_key: ${{ vars.STRIPE_PUBLISHABLE_KEY }}
+      TF_VAR_api_image_tag: ${{ needs.build-push.outputs.image_tag }}
+      TF_VAR_frontend_image_tag: ${{ needs.build-push.outputs.image_tag }}
+      ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+      ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      ARM_USE_OIDC: true
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Azure Login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform Init
+        working-directory: infra/terraform
+        run: terraform init
+
+      - name: Terraform Plan
+        working-directory: infra/terraform
+        run: terraform plan -input=false -out=tfplan
+
+      - name: Terraform Apply
+        working-directory: infra/terraform
+        run: terraform apply -input=false tfplan
