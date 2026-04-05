@@ -14,6 +14,7 @@ import (
 	chimiddleware "github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
 
+	"github.com/dimon2255/agentic-ecommerce/api/internal/admin"
 	"github.com/dimon2255/agentic-ecommerce/api/internal/assistant"
 	"github.com/dimon2255/agentic-ecommerce/api/internal/cart"
 	"github.com/dimon2255/agentic-ecommerce/api/internal/catalog"
@@ -60,6 +61,12 @@ func main() {
 	db := supabase.NewClient(cfg.Supabase.URL, cfg.Supabase.ServiceRoleKey, cfg.Supabase.Timeout)
 	auth := middleware.NewAuthMiddleware(cfg.Supabase.JWTSecret, cfg.Supabase.JWTIssuer, cfg.Supabase.JWTAudience, cfg.Supabase.URL)
 
+	// Admin RBAC & audit (handlers wired after catalog service is created)
+	adminRBAC := admin.NewRBACService(db, 5*time.Minute)
+	adminAudit := admin.NewAuditService(db)
+	adminStorage := supabase.NewStorageClient(cfg.Supabase.URL, cfg.Supabase.ServiceRoleKey)
+	adminRepo := admin.NewSupabaseRepository(db)
+
 	// Rate limiters
 	apiLimiter := middleware.NewRateLimiter(100, time.Minute)
 	checkoutLimiter := middleware.NewRateLimiter(20, time.Minute)
@@ -102,6 +109,14 @@ func main() {
 		DailyBudgetCents: cfg.Assistant.Cost.DailyBudgetCents,
 	})
 	assistantHandler := assistant.NewHandler(assistantSvc)
+
+	// Admin handlers (depends on catalogSvc)
+	adminMeHandler := admin.NewMeHandler(adminRBAC)
+	adminCatalogHandler := admin.NewCatalogHandler(catalogSvc, adminAudit)
+	adminOrderHandler := admin.NewOrderHandler(adminRepo, adminAudit)
+	adminReportsHandler := admin.NewReportsHandler(adminRepo)
+	adminAuditLogHandler := admin.NewAuditLogHandler(adminRepo)
+	adminImageHandler := admin.NewImageHandler(adminStorage)
 
 	r := chi.NewRouter()
 
@@ -174,6 +189,67 @@ func main() {
 			r.Use(auth.OptionalAuth)
 			r.Use(assistantLimiter.Middleware)
 			r.Post("/", assistantHandler.StreamRoute())
+		})
+
+		// Admin routes — require authenticated user with admin permissions
+		r.Route("/admin", func(r chi.Router) {
+			r.Use(middleware.Timeout(cfg.Server.RequestTimeout))
+			r.Use(auth.RequireAuth)
+			r.Use(middleware.RequireAnyPermission(adminRBAC,
+				"catalog:read", "orders:read", "reports:read", "audit:read"))
+
+			r.Mount("/me", adminMeHandler.Routes())
+
+			r.Route("/catalog", func(r chi.Router) {
+				r.Group(func(r chi.Router) {
+					r.Use(middleware.RequirePermission(adminRBAC, "catalog:read"))
+					r.Get("/products", adminCatalogHandler.ListProducts)
+					r.Get("/products/{slug}", adminCatalogHandler.GetProduct)
+					r.Get("/products/{productId}/skus", adminCatalogHandler.ListSKUs)
+					r.Get("/categories", adminCatalogHandler.ListCategories)
+					r.Get("/categories/{slug}", adminCatalogHandler.GetCategory)
+					r.Get("/categories/{categoryId}/attributes", adminCatalogHandler.ListAttributes)
+					r.Get("/attributes/{attrId}/options", adminCatalogHandler.ListOptions)
+				})
+				r.Group(func(r chi.Router) {
+					r.Use(middleware.RequirePermission(adminRBAC, "catalog:write"))
+					r.Post("/products", adminCatalogHandler.CreateProduct)
+					r.Patch("/products/{slug}", adminCatalogHandler.UpdateProduct)
+					r.Delete("/products/{slug}", adminCatalogHandler.DeleteProduct)
+					r.Post("/products/{productId}/skus", adminCatalogHandler.CreateSKU)
+					r.Delete("/skus/{skuId}", adminCatalogHandler.DeleteSKU)
+					r.Post("/categories", adminCatalogHandler.CreateCategory)
+					r.Patch("/categories/{slug}", adminCatalogHandler.UpdateCategory)
+					r.Delete("/categories/{slug}", adminCatalogHandler.DeleteCategory)
+					r.Post("/categories/{categoryId}/attributes", adminCatalogHandler.CreateAttribute)
+					r.Delete("/attributes/{attrId}", adminCatalogHandler.DeleteAttribute)
+					r.Post("/attributes/{attrId}/options", adminCatalogHandler.CreateOption)
+					r.Delete("/options/{optionId}", adminCatalogHandler.DeleteOption)
+				})
+			})
+
+			r.Route("/orders", func(r chi.Router) {
+				r.Use(middleware.RequirePermission(adminRBAC, "orders:read"))
+				r.Get("/", adminOrderHandler.List)
+				r.Get("/{id}", adminOrderHandler.Get)
+				r.With(middleware.RequirePermission(adminRBAC, "orders:write")).
+					Patch("/{id}/status", adminOrderHandler.UpdateStatus)
+			})
+
+			r.Route("/reports", func(r chi.Router) {
+				r.Use(middleware.RequirePermission(adminRBAC, "reports:read"))
+				r.Mount("/", adminReportsHandler.Routes())
+			})
+
+			r.Route("/audit-log", func(r chi.Router) {
+				r.Use(middleware.RequirePermission(adminRBAC, "audit:read"))
+				r.Mount("/", adminAuditLogHandler.Routes())
+			})
+
+			r.Route("/images", func(r chi.Router) {
+				r.Use(middleware.RequirePermission(adminRBAC, "catalog:write"))
+				r.Mount("/", adminImageHandler.Routes())
+			})
 		})
 	})
 

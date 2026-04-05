@@ -31,6 +31,7 @@ export default defineNuxtConfig({
     '/auth/**': { ssr: false },
     '/account/**': { ssr: false },
     '/order/**': { ssr: false },
+    '/admin/**': { ssr: false },
   },
 
   compatibilityDate: '2025-01-01',
