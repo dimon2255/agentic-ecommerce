@@ -1,3 +1,28 @@
+# E-Shop — Progress Tracker
+
+---
+
+## UI & Functional Fixes (2026-04-06)
+
+Fix three inconsistencies identified via IT Team party review.
+
+| # | Task | Status |
+|---|------|--------|
+| 1 | Fix cart `removeItem` not updating UI (refresh guard bypass) | Done |
+| 2 | Fix SSE streaming cursor (brown block -> thin blink caret) | Done |
+| 3 | Admin embeddings endpoint (`POST /admin/embeddings/regenerate`) | Done |
+| 4 | Auto-embed hook on product create/update (goroutine) | Done |
+| 5 | Admin embeddings UI page (`pages/admin/embeddings.vue`) | Done |
+| 6 | ADR-0007: Admin Embedding Integration | Done |
+
+**Details:**
+- Cart bug: `useCart.ts:removeItem` called `refresh()` without `force=true`, short-circuiting the re-fetch
+- Streaming cursor: replaced 6px amber block with 2px blinking caret (`animate-caret` keyframe)
+- Embeddings: new admin handler reuses Voyage + assistant repo, no background job system
+- Auto-hook: `CatalogHandler.onProductChange` callback fires goroutine on product create/update
+
+---
+
 # Frontend Test Coverage — Progress Tracker
 
 Plan: Add comprehensive test coverage for Nuxt 3 TypeScript frontend.

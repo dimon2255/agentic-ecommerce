@@ -37,7 +37,9 @@ func (c *Client) CreatePaymentIntent(amountCents int64, currency, orderID string
 }
 
 func (c *Client) VerifyWebhook(payload []byte, sigHeader string) (string, string, error) {
-	event, err := webhook.ConstructEvent(payload, sigHeader, c.webhookSecret)
+	event, err := webhook.ConstructEventWithOptions(payload, sigHeader, c.webhookSecret,
+		webhook.ConstructEventOptions{IgnoreAPIVersionMismatch: true},
+	)
 	if err != nil {
 		return "", "", fmt.Errorf("verify webhook signature: %w", err)
 	}

@@ -3,6 +3,7 @@ package checkout
 import (
 	"encoding/json"
 	"io"
+	"log/slog"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -73,16 +74,29 @@ func (h *CheckoutHandler) GetOrder(w http.ResponseWriter, r *http.Request) {
 func (h *CheckoutHandler) HandleWebhook(w http.ResponseWriter, r *http.Request) {
 	payload, err := io.ReadAll(http.MaxBytesReader(w, r.Body, h.webhookMaxBodySize))
 	if err != nil {
+		slog.Error("webhook: failed to read body", "error", err)
 		response.Error(w, http.StatusBadRequest, "failed to read request body")
 		return
 	}
 
 	sigHeader := r.Header.Get("Stripe-Signature")
+	slog.Info("webhook: received",
+		"payload_len", len(payload),
+		"sig_present", sigHeader != "",
+		"sig_prefix", sigHeader[:min(len(sigHeader), 20)],
+	)
+
 	eventType, piID, err := h.payments.VerifyWebhook(payload, sigHeader)
 	if err != nil {
+		slog.Error("webhook: signature verification failed",
+			"error", err,
+			"sig_header", sigHeader[:min(len(sigHeader), 30)],
+		)
 		response.Error(w, http.StatusBadRequest, "invalid webhook signature")
 		return
 	}
+
+	slog.Info("webhook: verified", "event_type", eventType, "payment_intent_id", piID)
 
 	switch eventType {
 	case "payment_intent.succeeded":

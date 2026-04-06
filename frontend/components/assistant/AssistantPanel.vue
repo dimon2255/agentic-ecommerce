@@ -93,7 +93,7 @@
                 <template v-else>
                   <div v-if="msg.role === 'user'" class="whitespace-pre-wrap text-sm" v-text="msg.content" />
                   <div v-else class="prose-chat" v-html="renderMarkdown(msg.content)" />
-                  <span v-if="msg.status === 'streaming'" class="inline-block w-1.5 h-4 bg-accent animate-pulse ml-0.5 align-text-bottom" />
+                  <span v-if="msg.status === 'streaming'" class="inline-block w-0.5 h-3.5 bg-accent/70 animate-caret ml-0.5 align-text-bottom" />
                 </template>
 
                 <!-- Product cards from tool results -->
@@ -319,6 +319,15 @@ onUnmounted(() => {
 .scrollbar-thin::-webkit-scrollbar-thumb {
   background: var(--border-default);
   border-radius: 2px;
+}
+
+/* Streaming caret blink */
+@keyframes caret-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+.animate-caret {
+  animation: caret-blink 0.8s step-end infinite;
 }
 
 /* Slide panel transition */

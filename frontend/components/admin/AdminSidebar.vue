@@ -29,6 +29,10 @@
         <SidebarLink to="/admin/reports/token-usage" icon="cpu" label="Token Usage" />
       </SidebarSection>
 
+      <SidebarSection v-if="hasPermission('catalog:write')" label="AI">
+        <SidebarLink to="/admin/embeddings" icon="sparkles" label="Embeddings" />
+      </SidebarSection>
+
       <SidebarLink
         v-if="hasPermission('audit:read')"
         to="/admin/audit-log"
@@ -103,5 +107,6 @@ const iconMap: Record<string, string> = {
   'trending-up': '\u2197',
   'cpu': '\u2699',
   'scroll': '\u2637',
+  'sparkles': '\u2728',
 }
 </script>
