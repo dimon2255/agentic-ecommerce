@@ -117,6 +117,16 @@ func main() {
 	adminReportsHandler := admin.NewReportsHandler(adminRepo)
 	adminAuditLogHandler := admin.NewAuditLogHandler(adminRepo)
 	adminImageHandler := admin.NewImageHandler(adminStorage)
+	adminEmbeddingHandler := admin.NewEmbeddingHandler(db, voyageClient, assistantRepo, adminAudit)
+
+	// Auto-regenerate embedding when a product is created or updated
+	adminCatalogHandler.SetOnProductChange(func(productID string) {
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+		if err := adminEmbeddingHandler.RegenerateProductByID(ctx, productID); err != nil {
+			slog.Error("auto-embed failed", "product_id", productID, "error", err)
+		}
+	})
 
 	r := chi.NewRouter()
 
@@ -249,6 +259,11 @@ func main() {
 			r.Route("/images", func(r chi.Router) {
 				r.Use(middleware.RequirePermission(adminRBAC, "catalog:write"))
 				r.Mount("/", adminImageHandler.Routes())
+			})
+
+			r.Route("/embeddings", func(r chi.Router) {
+				r.Use(middleware.RequirePermission(adminRBAC, "catalog:write"))
+				r.Mount("/", adminEmbeddingHandler.Routes())
 			})
 		})
 	})

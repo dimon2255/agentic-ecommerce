@@ -82,7 +82,7 @@ export function useCart() {
   async function removeItem(itemId: string) {
     const headers = await getHeaders()
     await del(`/cart/items/${itemId}`, headers)
-    await refresh()
+    await refresh(true)
   }
 
   const itemCount = computed(() => {

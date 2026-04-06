@@ -10,6 +10,7 @@ require (
 require github.com/golang-jwt/jwt/v5 v5.3.1
 
 require (
+	github.com/google/uuid v1.6.0
 	github.com/spf13/viper v1.21.0
 	github.com/stripe/stripe-go/v82 v82.5.1
 	github.com/subosito/gotenv v1.6.0
@@ -30,7 +31,6 @@ require (
 	github.com/go-logr/logr v1.4.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-viper/mapstructure/v2 v2.4.0 // indirect
-	github.com/google/uuid v1.6.0 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.28.0 // indirect
 	github.com/pelletier/go-toml/v2 v2.2.4 // indirect
 	github.com/sagikazarmark/locafero v0.11.0 // indirect

@@ -15,12 +15,18 @@ import (
 
 // CatalogHandler wraps the existing catalog.Service for admin use, adding audit logging.
 type CatalogHandler struct {
-	svc   catalog.Service
-	audit *AuditService
+	svc             catalog.Service
+	audit           *AuditService
+	onProductChange func(productID string)
 }
 
 func NewCatalogHandler(svc catalog.Service, audit *AuditService) *CatalogHandler {
 	return &CatalogHandler{svc: svc, audit: audit}
+}
+
+// SetOnProductChange registers a callback fired (in a goroutine) after product create/update.
+func (h *CatalogHandler) SetOnProductChange(fn func(productID string)) {
+	h.onProductChange = fn
 }
 
 func (h *CatalogHandler) Routes() chi.Router {
@@ -104,6 +110,9 @@ func (h *CatalogHandler) CreateProduct(w http.ResponseWriter, r *http.Request) {
 
 	userID, _ := middleware.GetUserID(r.Context())
 	h.audit.LogFromRequest(r, userID, "product:create", "product", product.ID, req)
+	if h.onProductChange != nil {
+		go h.onProductChange(product.ID)
+	}
 	response.JSON(w, http.StatusCreated, product)
 }
 
@@ -123,6 +132,9 @@ func (h *CatalogHandler) UpdateProduct(w http.ResponseWriter, r *http.Request) {
 
 	userID, _ := middleware.GetUserID(r.Context())
 	h.audit.LogFromRequest(r, userID, "product:update", "product", product.ID, req)
+	if h.onProductChange != nil {
+		go h.onProductChange(product.ID)
+	}
 	response.JSON(w, http.StatusOK, product)
 }
 
