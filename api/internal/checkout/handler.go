@@ -80,7 +80,7 @@ func (h *CheckoutHandler) HandleWebhook(w http.ResponseWriter, r *http.Request) 
 	}
 
 	sigHeader := r.Header.Get("Stripe-Signature")
-	slog.Info("webhook: received",
+	slog.Debug("webhook: received",
 		"payload_len", len(payload),
 		"sig_present", sigHeader != "",
 		"sig_prefix", sigHeader[:min(len(sigHeader), 20)],
@@ -96,7 +96,7 @@ func (h *CheckoutHandler) HandleWebhook(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	slog.Info("webhook: verified", "event_type", eventType, "payment_intent_id", piID)
+	slog.Debug("webhook: verified", "event_type", eventType, "payment_intent_id", piID)
 
 	switch eventType {
 	case "payment_intent.succeeded":

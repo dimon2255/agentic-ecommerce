@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 
@@ -16,6 +17,7 @@ import (
 )
 
 // Supabase DTO types for embedding data fetches.
+// NOTE: These DTOs mirror cmd/embed/main.go — keep in sync on schema changes.
 type embProduct struct {
 	ID          string   `json:"id"`
 	CategoryID  string   `json:"category_id"`
@@ -74,7 +76,8 @@ func (h *EmbeddingHandler) RegenerateAll(w http.ResponseWriter, r *http.Request)
 	userID, _ := middleware.GetUserID(r.Context())
 
 	go func() {
-		ctx := context.Background()
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+		defer cancel()
 		count, err := h.regenerateAll(ctx)
 		if err != nil {
 			slog.Error("embedding regeneration failed", "error", err)
@@ -96,7 +99,8 @@ func (h *EmbeddingHandler) RegenerateProduct(w http.ResponseWriter, r *http.Requ
 	userID, _ := middleware.GetUserID(r.Context())
 
 	if err := h.RegenerateProductByID(r.Context(), productID); err != nil {
-		response.Error(w, http.StatusInternalServerError, fmt.Sprintf("embedding failed: %v", err))
+		slog.Error("embedding regeneration failed", "product_id", productID, "error", err)
+		response.Error(w, http.StatusInternalServerError, "embedding regeneration failed")
 		return
 	}
 

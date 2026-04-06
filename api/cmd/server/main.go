@@ -121,7 +121,9 @@ func main() {
 
 	// Auto-regenerate embedding when a product is created or updated
 	adminCatalogHandler.SetOnProductChange(func(productID string) {
-		if err := adminEmbeddingHandler.RegenerateProductByID(context.Background(), productID); err != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+		if err := adminEmbeddingHandler.RegenerateProductByID(ctx, productID); err != nil {
 			slog.Error("auto-embed failed", "product_id", productID, "error", err)
 		}
 	})
